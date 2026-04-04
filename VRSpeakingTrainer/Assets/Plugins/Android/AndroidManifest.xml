@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Main Android manifest for VR Speaking Trainer.
+
+    This variant targets UnityPlayerActivity and should be used with
+    Player Settings > Android > Other Settings > Configuration > Application Entry = Activity.
+
+    Keep this manifest minimal so Unity and the Cardboard package can merge in
+    their own expected pieces without conflicting overrides.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools"
+          package="com.sabin.vrspeakingtrainer">
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="true" />
+
+    <application
+        android:name="com.sabin.vrspeakingtrainer.VRSpeakApp"
+        android:label="@string/app_name"
+        android:icon="@mipmap/app_icon"
+        android:theme="@style/UnityThemeSelector">
+
+        <activity
+            android:name="com.unity3d.player.UnityPlayerActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:hardwareAccelerated="true"
+            android:exported="true"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density"
+            tools:replace="android:screenOrientation,android:hardwareAccelerated">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+        </activity>
+
+        <!-- QrCodeCaptureActivity extends AppCompatActivity and requires a Theme.AppCompat
+             descendant. AppCompat 1.7.0 is pulled in via mainTemplate.gradle so this
+             resource is guaranteed to exist at build time. -->
+        <activity
+            android:name="com.google.cardboard.sdk.QrCodeCaptureActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:exported="false"
+            tools:replace="android:theme" />
+
+        <meta-data
+            android:name="com.google.android.cardboard.DISABLE_CAMERA_PERMISSION_CHECK"
+            android:value="true" />
+
+    </application>
+</manifest>
+
+
+

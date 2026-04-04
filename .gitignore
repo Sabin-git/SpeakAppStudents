@@ -1,0 +1,56 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Git / local tooling
+.claude/
+.vscode/
+
+# Local notes / internal workflow docs
+VRSpeakingTrainer/CLAUDE.md
+
+# Crash logs and ad-hoc local logs
+crashlogs/
+crashlog.txt
+*.log
+
+# Unity generated folders
+VRSpeakingTrainer/[Ll]ibrary/
+VRSpeakingTrainer/[Tt]emp/
+VRSpeakingTrainer/[Oo]bj/
+VRSpeakingTrainer/[Bb]uild/
+VRSpeakingTrainer/[Bb]uilds/
+VRSpeakingTrainer/[Ll]ogs/
+VRSpeakingTrainer/[Uu]ser[Ss]ettings/
+VRSpeakingTrainer/[Mm]emoryCaptures/
+VRSpeakingTrainer/[Rr]ecordings/
+VRSpeakingTrainer/ProfilerCaptures/
+VRSpeakingTrainer/.utmp/
+
+# Unity generated IDE / solution files
+VRSpeakingTrainer/*.csproj
+VRSpeakingTrainer/*.unityproj
+VRSpeakingTrainer/*.sln
+VRSpeakingTrainer/*.slnx
+VRSpeakingTrainer/*.suo
+VRSpeakingTrainer/*.tmp
+VRSpeakingTrainer/*.user
+VRSpeakingTrainer/*.userprefs
+VRSpeakingTrainer/*.pidb
+VRSpeakingTrainer/*.booproj
+VRSpeakingTrainer/*.svd
+VRSpeakingTrainer/*.pdb
+VRSpeakingTrainer/*.mdb
+VRSpeakingTrainer/*.opendb
+VRSpeakingTrainer/*.VC.db
+
+# Rider / Visual Studio caches
+VRSpeakingTrainer/.vs/
+VRSpeakingTrainer/.idea/
+
+# Keep the real Unity project content
+!VRSpeakingTrainer/Assets/
+!VRSpeakingTrainer/Packages/
+!VRSpeakingTrainer/ProjectSettings/
+
