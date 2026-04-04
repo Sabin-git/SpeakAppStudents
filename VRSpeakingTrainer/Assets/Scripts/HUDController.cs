@@ -2,26 +2,33 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// Updates the screen-space countdown timer HUD.
+/// Updates the screen-space HUD: countdown timer and live transcript.
 /// Attach to a Screen Space - Overlay Canvas in the Session scene.
-/// The canvas does not move with the head — it stays fixed to the screen.
 /// </summary>
 public class HUDController : MonoBehaviour
 {
     [Header("HUD References")]
-    [Tooltip("TextMeshProUGUI label that shows remaining time as MM:SS")]
+    [Tooltip("MM:SS countdown label")]
     [SerializeField] private TextMeshProUGUI timerLabel;
+    [Tooltip("Transcript label — shows last recognised phrase")]
+    [SerializeField] private TextMeshProUGUI transcriptLabel;
+    [Tooltip("WPM label — shows rolling words-per-minute")]
+    [SerializeField] private TextMeshProUGUI wpmLabel;
 
     private void OnEnable()
     {
-        SessionManager.OnSessionStart += HandleSessionStart;
-        SessionManager.OnSessionEnd   += HandleSessionEnd;
+        SessionManager.OnSessionStart          += HandleSessionStart;
+        SessionManager.OnSessionEnd            += HandleSessionEnd;
+        SpeechRecognizer.OnTranscriptionResult += HandleTranscript;
+        SpeechAnalyzer.OnMetricsUpdate         += HandleMetrics;
     }
 
     private void OnDisable()
     {
-        SessionManager.OnSessionStart -= HandleSessionStart;
-        SessionManager.OnSessionEnd   -= HandleSessionEnd;
+        SessionManager.OnSessionStart          -= HandleSessionStart;
+        SessionManager.OnSessionEnd            -= HandleSessionEnd;
+        SpeechRecognizer.OnTranscriptionResult -= HandleTranscript;
+        SpeechAnalyzer.OnMetricsUpdate         -= HandleMetrics;
     }
 
     private void Update()
@@ -39,11 +46,27 @@ public class HUDController : MonoBehaviour
 
     private void HandleSessionStart()
     {
-        if (timerLabel != null) timerLabel.gameObject.SetActive(true);
+        if (timerLabel      != null) timerLabel.gameObject.SetActive(true);
+        if (transcriptLabel != null) { transcriptLabel.text = ""; transcriptLabel.gameObject.SetActive(true); }
+        if (wpmLabel        != null) { wpmLabel.text = "0 WPM"; wpmLabel.gameObject.SetActive(true); }
     }
 
     private void HandleSessionEnd(SpeechMetrics _)
     {
-        if (timerLabel != null) timerLabel.gameObject.SetActive(false);
+        if (timerLabel      != null) timerLabel.gameObject.SetActive(false);
+        if (transcriptLabel != null) transcriptLabel.gameObject.SetActive(false);
+        if (wpmLabel        != null) wpmLabel.gameObject.SetActive(false);
+    }
+
+    private void HandleTranscript(string text, bool isFinal)
+    {
+        if (transcriptLabel == null) return;
+        transcriptLabel.text = isFinal ? text : $"...{text}";
+    }
+
+    private void HandleMetrics(SpeechMetrics m)
+    {
+        if (wpmLabel == null) return;
+        wpmLabel.text = $"{Mathf.RoundToInt(m.wpm)} WPM";
     }
 }

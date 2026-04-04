@@ -54,3 +54,10 @@ VRSpeakingTrainer/.idea/
 !VRSpeakingTrainer/Packages/
 !VRSpeakingTrainer/ProjectSettings/
 
+# API keys — never commit
+VRSpeakingTrainer/Assets/StreamingAssets/config.json
+VRSpeakingTrainer/Assets/StreamingAssets/config.json.meta
+
+# Vosk package
+vosk-unity-asr-master/
+
