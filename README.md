@@ -172,7 +172,7 @@ SpeakAppStudents/
 ### Clone The Repository
 
 ```powershell
-git clone <your-repo-url>
+git clone https://github.com/Sabin-git/SpeakAppStudents.git
 cd SpeakAppStudents
 ```
 
