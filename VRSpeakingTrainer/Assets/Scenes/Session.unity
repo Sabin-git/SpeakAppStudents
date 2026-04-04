@@ -1613,6 +1613,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 57259441}
+  - component: {fileID: 57259442}
   m_Layer: 0
   m_Name: Desk_07
   m_TagString: Untagged
@@ -1638,6 +1639,19 @@ Transform:
   - {fileID: 1957323651}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &57259442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 57259440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 7
 --- !u!1 &69295945
 GameObject:
   m_ObjectHideFlags: 0
@@ -2340,6 +2354,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 336857226}
+  - component: {fileID: 336857227}
   m_Layer: 0
   m_Name: Desk_09
   m_TagString: Untagged
@@ -2365,6 +2380,70 @@ Transform:
   - {fileID: 924879960}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &336857227
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 336857225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 9
+--- !u!1 &339313372
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 339313373}
+  - component: {fileID: 339313374}
+  m_Layer: 0
+  m_Name: _AudienceController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &339313373
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 339313372}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 297.94434, y: 330.72858, z: -69.8355}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &339313374
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 339313372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb5472ed9956b92409a2028de232c8af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceController
+  headTracker: {fileID: 1443868845}
+  activeAudienceCount: 2
+  clipEngaged: {fileID: 0}
+  clipNeutral: {fileID: 0}
+  clipDistracted: {fileID: 0}
+  clipRestless: {fileID: 0}
+  audioFadeDuration: 1
 --- !u!1 &361354485
 GameObject:
   m_ObjectHideFlags: 0
@@ -2486,6 +2565,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 363439439}
+  - component: {fileID: 363439440}
   m_Layer: 0
   m_Name: Desk_01
   m_TagString: Untagged
@@ -2511,6 +2591,19 @@ Transform:
   - {fileID: 916542618}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &363439440
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 363439438}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 1
 --- !u!1 &364308801
 GameObject:
   m_ObjectHideFlags: 0
@@ -3059,6 +3152,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 527181242}
+  - component: {fileID: 527181243}
   m_Layer: 0
   m_Name: Desk_03
   m_TagString: Untagged
@@ -3084,6 +3178,19 @@ Transform:
   - {fileID: 1647259427}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &527181243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 527181241}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 3
 --- !u!1 &538148030
 GameObject:
   m_ObjectHideFlags: 0
@@ -3510,6 +3617,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 593256822}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &609907617
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 609907619}
+  - component: {fileID: 609907618}
+  m_Layer: 0
+  m_Name: _AudienceRuleEngine
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &609907618
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 609907617}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ae9484b29707574694ba060dd36eceb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceRuleEngine
+  minHoldSec: 4
+  highWpmSustainSec: 20
+  lecternSustainSec: 5
+  otherSustainSec: 5
+--- !u!4 &609907619
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 609907617}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 297.94434, y: 330.72858, z: -69.8355}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &611872812
 GameObject:
   m_ObjectHideFlags: 0
@@ -4439,6 +4594,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 809561386}
+  - component: {fileID: 809561387}
   m_Layer: 0
   m_Name: Desk_08
   m_TagString: Untagged
@@ -4464,6 +4620,19 @@ Transform:
   - {fileID: 1969036611}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &809561387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 809561385}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 8
 --- !u!1 &869578657
 GameObject:
   m_ObjectHideFlags: 0
@@ -4886,6 +5055,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 969342337}
+  - component: {fileID: 969342338}
   m_Layer: 0
   m_Name: Desk_00
   m_TagString: Untagged
@@ -4911,6 +5081,19 @@ Transform:
   - {fileID: 1605225162}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &969342338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 969342336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 0
 --- !u!1 &1005905658
 GameObject:
   m_ObjectHideFlags: 0
@@ -5063,6 +5246,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1032203122}
+  - component: {fileID: 1032203123}
   m_Layer: 0
   m_Name: Desk_04
   m_TagString: Untagged
@@ -5088,6 +5272,19 @@ Transform:
   - {fileID: 330666659}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1032203123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1032203121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 4
 --- !u!1 &1057194842
 GameObject:
   m_ObjectHideFlags: 0
@@ -5800,8 +5997,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ac2fd255b6ee284ab3ef486689aef74, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpeechRecognizer
-  chunkSeconds: 5
+  chunkSeconds: 4
   sampleRate: 16000
+  mockMode: 1
+  mockInterval: 6
 --- !u!114 &1248566577
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6076,6 +6275,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1342189558}
+  - component: {fileID: 1342189559}
   m_Layer: 0
   m_Name: Desk_02
   m_TagString: Untagged
@@ -6101,6 +6301,19 @@ Transform:
   - {fileID: 1239545030}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1342189559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1342189557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 2
 --- !u!1 &1346880482
 GameObject:
   m_ObjectHideFlags: 0
@@ -6580,6 +6793,62 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1402427064}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1443868844
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1443868846}
+  - component: {fileID: 1443868845}
+  m_Layer: 0
+  m_Name: _HeadTracker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1443868845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443868844}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 743679837f8ef554fa8e6d9062dcd96c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadTracker
+  audienceHorizontalDeg: 45
+  audienceVerticalMaxDeg: 20
+  lecternVerticalDeg: 32
+  lecternHorizontalDeg: 30
+  deadzoneBufDeg: 5
+  avatarGazeDeg: 15
+  xrCamera: {fileID: 1383764033}
+  audienceTarget: {fileID: 1346880483}
+  lecternTarget: {fileID: 1057194843}
+  debugOverrideZone: 0
+  debugZone: 0
+  avatarTransforms: []
+--- !u!4 &1443868846
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443868844}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 297.94434, y: 330.72858, z: -69.8355}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1468332104
 GameObject:
   m_ObjectHideFlags: 0
@@ -7302,6 +7571,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1720452832}
+  - component: {fileID: 1720452833}
   m_Layer: 0
   m_Name: Desk_05
   m_TagString: Untagged
@@ -7327,6 +7597,19 @@ Transform:
   - {fileID: 798697325}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1720452833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1720452831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 5
 --- !u!1 &1721483305
 GameObject:
   m_ObjectHideFlags: 0
@@ -7560,6 +7843,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1742062494}
+  - component: {fileID: 1742062495}
   m_Layer: 0
   m_Name: Desk_06
   m_TagString: Untagged
@@ -7585,6 +7869,19 @@ Transform:
   - {fileID: 766423951}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1742062495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1742062493}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
+  avatarIndex: 6
 --- !u!1 &1754989680
 GameObject:
   m_ObjectHideFlags: 0
@@ -8468,3 +8765,6 @@ SceneRoots:
   - {fileID: 522280887}
   - {fileID: 1812671900}
   - {fileID: 1248566575}
+  - {fileID: 1443868846}
+  - {fileID: 609907619}
+  - {fileID: 339313373}
