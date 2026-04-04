@@ -3,14 +3,13 @@ using TMPro;
 
 /// <summary>
 /// Updates the screen-space countdown timer HUD.
-/// Fixed to screen — does not move with head.
-/// Listens to SessionManager.OnSessionStart / OnSessionEnd.
-/// Implementation: Stage 3.
+/// Attach to a Screen Space - Overlay Canvas in the Session scene.
+/// The canvas does not move with the head — it stays fixed to the screen.
 /// </summary>
 public class HUDController : MonoBehaviour
 {
     [Header("HUD References")]
-    [Tooltip("TextMeshProUGUI label showing remaining time MM:SS")]
+    [Tooltip("TextMeshProUGUI label that shows remaining time as MM:SS")]
     [SerializeField] private TextMeshProUGUI timerLabel;
 
     private void OnEnable()
@@ -27,10 +26,24 @@ public class HUDController : MonoBehaviour
 
     private void Update()
     {
-        // TODO Stage 3: read SessionManager.Instance remaining time, format as MM:SS,
-        // update timerLabel.text each frame.
+        if (SessionManager.Instance == null || !SessionManager.Instance.IsRunning)
+            return;
+
+        float remaining = SessionManager.Instance.RemainingSeconds;
+        int   minutes   = Mathf.FloorToInt(remaining / 60f);
+        int   seconds   = Mathf.FloorToInt(remaining % 60f);
+
+        if (timerLabel != null)
+            timerLabel.text = $"{minutes:D2}:{seconds:D2}";
     }
 
-    private void HandleSessionStart()  { /* TODO Stage 3 */ }
-    private void HandleSessionEnd(SpeechMetrics m) { /* TODO Stage 3 */ }
+    private void HandleSessionStart()
+    {
+        if (timerLabel != null) timerLabel.gameObject.SetActive(true);
+    }
+
+    private void HandleSessionEnd(SpeechMetrics _)
+    {
+        if (timerLabel != null) timerLabel.gameObject.SetActive(false);
+    }
 }
