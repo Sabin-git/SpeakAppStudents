@@ -21,6 +21,9 @@ public class SessionManager : MonoBehaviour
     public static event Action OnSessionStart;
     public static event Action<SpeechMetrics> OnSessionEnd;
 
+    private void OnEnable()  => SpeechAnalyzer.OnMetricsUpdate += UpdateMetrics;
+    private void OnDisable() => SpeechAnalyzer.OnMetricsUpdate -= UpdateMetrics;
+
     public bool  IsRunning        { get; private set; }
     public float ElapsedSeconds   { get; private set; }
     public float RemainingSeconds => Mathf.Max(0f, _maxDuration - ElapsedSeconds);
@@ -148,6 +151,10 @@ public class SessionManager : MonoBehaviour
         _finalMetrics.sessionTime = ElapsedSeconds;
         OnSessionEnd?.Invoke(_finalMetrics);
         Debug.Log($"[SessionManager] Session ended. Elapsed: {ElapsedSeconds:F1}s");
+        PlayerPrefs.SetFloat("Results_AvgWPM",      _finalMetrics.rollingAvgWpm);
+        PlayerPrefs.SetInt  ("Results_FillerCount", _finalMetrics.fillerCount);
+        PlayerPrefs.SetFloat("Results_SessionTime", _finalMetrics.sessionTime);
+        PlayerPrefs.Save();
         SceneManager.LoadScene("Results");
     }
 
