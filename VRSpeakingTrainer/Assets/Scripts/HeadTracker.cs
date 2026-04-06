@@ -75,7 +75,14 @@ public class HeadTracker : MonoBehaviour
         _isRunning = true;
     }
 
-    private void HandleSessionEnd(SpeechMetrics _) => _isRunning = false;
+    private void HandleSessionEnd(SpeechMetrics _)
+    {
+        PlayerPrefs.SetFloat("Results_TimeOnAudience", _metrics.timeOnAudience);
+        PlayerPrefs.SetFloat("Results_TimeOnLectern",  _metrics.timeOnLectern);
+        PlayerPrefs.SetFloat("Results_TimeOnOther",    _metrics.timeOnOther);
+        PlayerPrefs.Save();
+        _isRunning = false;
+    }
 
     // ── Per-frame update ───────────────────────────────────────────────────────
 
