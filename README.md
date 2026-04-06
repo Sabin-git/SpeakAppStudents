@@ -60,17 +60,17 @@ This roadmap reflects the current project plan and intended implementation order
 
 - [x] Stage 1 - VR Foundation
   Cardboard rig, scenes, first Android build
-- [~] Stage 2 - Classroom Environment
+- [x] Stage 2 - Classroom Environment
   ProBuilder room, 10 avatars in 2x5 rows, decorative blackboard on back wall, angled lectern with slide and notes panels, `AudienceTarget` and `LecternTarget`
-- [ ] Stage 3 - Session System
+- [x] Stage 3 - Session System
   `SessionManager`, user-set countdown timer, screen-space HUD, pause menu, volume key slide control stub
-- [ ] Stage 4 - Vosk Integration
+- [x] Stage 4 - Vosk Integration
   Microphone input, transcription, live transcript on HUD
-- [ ] Stage 5 - Speech Metrics
+- [x] Stage 5 - Speech Metrics
   `SpeechAnalyzer`, WPM, pauses, filler-word tracking, HUD display
-- [ ] Stage 6 - Rule Engine + Audience AI
+- [x] Stage 6 - Rule Engine + Audience AI
   `AudienceRuleEngine`, `AudienceController`, audio behavior, plus `HeadTracker` gaze classification and timing
-- [ ] Stage 7 - Avatar Animations
+- [x] Stage 7 - Avatar Animations
   Animator controller, per-avatar randomisation, individual gaze reactions, polish
 - [ ] Stage 8 - Slide System - PC Pre-processing
   `convert_pptx.py`, `SlideController`, PNG slide loading, `notes.json`, volume-key navigation
