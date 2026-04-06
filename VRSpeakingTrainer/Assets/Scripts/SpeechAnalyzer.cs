@@ -16,6 +16,8 @@ public class SpeechAnalyzer : MonoBehaviour
     [SerializeField] private float wpmWindow      = 10f;  // seconds for rolling WPM
     [SerializeField] private float fillerWindow   = 30f;  // seconds for filler count
     [SerializeField] private float pauseThreshold = 1.5f; // seconds before gap is a pause
+    [Tooltip("EMA smoothing factor for WPM display (0=no change, 1=instant). 0.4–0.6 recommended.")]
+    [SerializeField] [Range(0f, 1f)] private float wpmSmoothing = 0.5f;
 
     private static readonly string[] FillerWords =
     {
@@ -32,6 +34,7 @@ public class SpeechAnalyzer : MonoBehaviour
     private bool  _isRunning;
     private float _emitTimer;
     private int   _totalWords;
+    private float _smoothedWpm;  // EMA-smoothed WPM for stable display
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -53,11 +56,12 @@ public class SpeechAnalyzer : MonoBehaviour
     {
         _wordLog.Clear();
         _fillerLog.Clear();
-        _totalWords       = 0;
-        _sessionStartTime = Time.time;
-        _lastTranscriptTime = Time.time; // no pause at start
-        _emitTimer        = 0f;
-        _isRunning        = true;
+        _totalWords         = 0;
+        _sessionStartTime   = Time.time;
+        _lastTranscriptTime = Time.time;
+        _emitTimer          = 0f;
+        _smoothedWpm        = 0f;
+        _isRunning          = true;
     }
 
     private void HandleSessionEnd(SpeechMetrics _) => _isRunning = false;
@@ -103,7 +107,14 @@ public class SpeechAnalyzer : MonoBehaviour
         PruneLog(_wordLog, cutoff);
         int recentWords = 0;
         foreach (var (_, w) in _wordLog) recentWords += w;
-        float wpm = wpmWindow > 0f ? recentWords / wpmWindow * 60f : 0f;
+        float rawWpm = wpmWindow > 0f ? recentWords / wpmWindow * 60f : 0f;
+
+        // EMA smoothing — prevents step jumps caused by discrete speech chunks
+        // entering/leaving the rolling window. Alpha=wpmSmoothing: 0=frozen, 1=raw.
+        _smoothedWpm = _smoothedWpm < 1f
+            ? rawWpm                                             // first sample: seed directly
+            : Mathf.Lerp(_smoothedWpm, rawWpm, wpmSmoothing);
+        float wpm = _smoothedWpm;
 
         // Session-average WPM
         float avgWpm = elapsed > 0f ? _totalWords / elapsed * 60f : 0f;

@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Reads XR camera orientation every frame, classifies gaze zone, accumulates
-/// time per zone, detects per-avatar eye contact. Emits HeadMetrics.
-/// Implementation: Stage 6.
+/// time per zone, detects per-avatar eye contact. Emits HeadMetrics every frame.
+/// Zone boundaries are Inspector-configurable.
 /// </summary>
 public class HeadTracker : MonoBehaviour
 {
@@ -31,14 +31,121 @@ public class HeadTracker : MonoBehaviour
     [Tooltip("LecternTarget empty GO (centre of lectern surface)")]
     [SerializeField] private Transform lecternTarget;
 
-    // Stage 6 — filled by AudienceController once avatars are spawned
+    [Header("Editor Debug")]
+    [Tooltip("Force a specific zone in Editor Play Mode (bypasses camera reading)")]
+    [SerializeField] private bool debugOverrideZone;
+    [SerializeField] private GazeZone debugZone = GazeZone.Audience;
+
+    // Filled by AudienceController once avatars are located
     [HideInInspector] public Transform[] avatarTransforms;
 
+    // Precomputed vertical boundaries (degrees, negative = below horizontal)
+    private float _audienceVertMin;  // lower edge of Audience zone
+    private float _lecternVertMax;   // upper edge of Lectern zone
+    private float _lecternVertMin;   // lower edge of Lectern zone
+
     private HeadMetrics _metrics;
+    private bool _isRunning;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    private void Awake()
+    {
+        // Precompute zone vertical boundaries from Inspector values
+        _audienceVertMin = -(lecternVerticalDeg - deadzoneBufDeg);  // e.g. -27°
+        _lecternVertMax  = _audienceVertMin - deadzoneBufDeg;        // e.g. -32°
+        _lecternVertMin  = -(lecternVerticalDeg + deadzoneBufDeg);   // e.g. -37°
+    }
+
+    private void OnEnable()
+    {
+        SessionManager.OnSessionStart += HandleSessionStart;
+        SessionManager.OnSessionEnd   += HandleSessionEnd;
+    }
+
+    private void OnDisable()
+    {
+        SessionManager.OnSessionStart -= HandleSessionStart;
+        SessionManager.OnSessionEnd   -= HandleSessionEnd;
+    }
+
+    private void HandleSessionStart()
+    {
+        _metrics  = default;
+        _isRunning = true;
+    }
+
+    private void HandleSessionEnd(SpeechMetrics _) => _isRunning = false;
+
+    // ── Per-frame update ───────────────────────────────────────────────────────
 
     private void Update()
     {
-        // TODO Stage 6: classify zone from xrCamera.forward, accumulate time,
-        // detect per-avatar gaze, fire OnHeadMetricsUpdated.
+        if (!_isRunning) return;
+
+        GazeZone zone = debugOverrideZone ? debugZone : ClassifyZone();
+
+        // Accumulate time (Deadzone contributes to nothing)
+        switch (zone)
+        {
+            case GazeZone.Audience: _metrics.timeOnAudience += Time.deltaTime; break;
+            case GazeZone.Lectern:  _metrics.timeOnLectern  += Time.deltaTime; break;
+            case GazeZone.Other:    _metrics.timeOnOther    += Time.deltaTime; break;
+        }
+
+        _metrics.currentZone    = zone;
+        _metrics.isFacingCrowd  = zone == GazeZone.Audience;
+        _metrics.gazedAvatarIndex = DetectGazedAvatar();
+
+        OnHeadMetricsUpdated?.Invoke(_metrics);
+    }
+
+    // ── Zone classification ────────────────────────────────────────────────────
+
+    private GazeZone ClassifyZone()
+    {
+        if (xrCamera == null) return GazeZone.Other;
+
+        Vector3 fwd = xrCamera.forward;
+
+        // Signed horizontal angle around Y axis (0° = straight forward)
+        float hAngle = Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg;
+        // Vertical angle (positive = above horizontal)
+        float vAngle = Mathf.Asin(Mathf.Clamp(fwd.y, -1f, 1f)) * Mathf.Rad2Deg;
+
+        // Audience: roughly horizontal, within ±audienceHorizontalDeg
+        if (Mathf.Abs(hAngle) <= audienceHorizontalDeg
+            && vAngle > _audienceVertMin
+            && vAngle < audienceVerticalMaxDeg)
+            return GazeZone.Audience;
+
+        // Lectern: looking down ~lecternVerticalDeg, within ±lecternHorizontalDeg
+        if (Mathf.Abs(hAngle) <= lecternHorizontalDeg
+            && vAngle <= _lecternVertMax
+            && vAngle >= _lecternVertMin)
+            return GazeZone.Lectern;
+
+        // Deadzone: the 5° gap between Audience lower and Lectern upper
+        if (vAngle <= _audienceVertMin && vAngle > _lecternVertMax)
+            return GazeZone.Deadzone;
+
+        return GazeZone.Other;
+    }
+
+    // ── Per-avatar gaze detection ──────────────────────────────────────────────
+
+    private int DetectGazedAvatar()
+    {
+        if (xrCamera == null || avatarTransforms == null) return -1;
+
+        Vector3 fwd = xrCamera.forward;
+        for (int i = 0; i < avatarTransforms.Length; i++)
+        {
+            if (avatarTransforms[i] == null) continue;
+            Vector3 toAvatar = (avatarTransforms[i].position - xrCamera.position).normalized;
+            if (Vector3.Angle(fwd, toAvatar) <= avatarGazeDeg)
+                return i;
+        }
+        return -1;
     }
 }
