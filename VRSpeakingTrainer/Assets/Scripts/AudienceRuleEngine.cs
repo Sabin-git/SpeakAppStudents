@@ -20,6 +20,11 @@ public class AudienceRuleEngine : MonoBehaviour
 {
     public static event System.Action<AudienceState> OnStateChanged;
 
+    [Header("Debug — Force State")]
+    [Tooltip("When enabled, ignores all rules and locks the audience to the state below.")]
+    [SerializeField] private bool         debugForceState  = false;
+    [SerializeField] private AudienceState debugForcedState = AudienceState.Neutral;
+
     [Header("Thresholds")]
     [SerializeField] private float minHoldSec          = 4f;
     [SerializeField] private float highWpmSustainSec   = 20f;
@@ -77,6 +82,9 @@ public class AudienceRuleEngine : MonoBehaviour
     {
         if (!_isRunning) return;
         _holdTimer += Time.deltaTime;
+
+        if (debugForceState)
+            TryTransition(debugForcedState);
     }
 
     // ── Metric handlers ────────────────────────────────────────────────────────
@@ -105,7 +113,7 @@ public class AudienceRuleEngine : MonoBehaviour
 
     private void HandleSpeechMetrics(SpeechMetrics s)
     {
-        if (!_isRunning) return;
+        if (!_isRunning || debugForceState) return;
         _latestSpeech = s;
 
         // Sustained WPM timers — increment by emit interval (~2s each call)
@@ -180,4 +188,21 @@ public class AudienceRuleEngine : MonoBehaviour
         Debug.Log($"[AudienceRuleEngine] State → {_currentState}");
         OnStateChanged?.Invoke(_currentState);
     }
+
+    // ── Debug shortcuts (right-click the component in Inspector) ──────────────
+
+    [ContextMenu("Debug - Force Engaged")]
+    private void DebugForceEngaged()    { debugForceState = true; debugForcedState = AudienceState.Engaged;    _holdTimer = minHoldSec; }
+
+    [ContextMenu("Debug - Force Neutral")]
+    private void DebugForceNeutral()    { debugForceState = true; debugForcedState = AudienceState.Neutral;    _holdTimer = minHoldSec; }
+
+    [ContextMenu("Debug - Force Distracted")]
+    private void DebugForceDistracted() { debugForceState = true; debugForcedState = AudienceState.Distracted; _holdTimer = minHoldSec; }
+
+    [ContextMenu("Debug - Force Restless")]
+    private void DebugForceRestless()   { debugForceState = true; debugForcedState = AudienceState.Restless;   _holdTimer = minHoldSec; }
+
+    [ContextMenu("Debug - Release Force")]
+    private void DebugReleaseForce()    { debugForceState = false; }
 }

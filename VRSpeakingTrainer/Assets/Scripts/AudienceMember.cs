@@ -7,8 +7,9 @@ using UnityEngine;
 ///   30–70% of avatars switch immediately (randomised per instance).
 ///   The rest delay up to 5 seconds before switching.
 ///
-/// Drives an Animator "State" int parameter if an Animator is present.
-/// If no Animator exists (Stage 6 — added in Stage 7), this is a no-op.
+/// Drives an Animator "State" int parameter and "GazeReact" trigger on the
+/// child avatar model. Animator is looked up in children so the model FBX
+/// can sit as a child of AvatarAnchor.
 /// </summary>
 public class AudienceMember : MonoBehaviour
 {
@@ -22,7 +23,12 @@ public class AudienceMember : MonoBehaviour
     private float         _switchTimer;
     private bool          _isGazed;
 
-    private static readonly int AnimStateId = Animator.StringToHash("State");
+    private Animator _anim;
+
+    private static readonly int AnimStateId   = Animator.StringToHash("State");
+    private static readonly int GazeReactId   = Animator.StringToHash("GazeReact");
+
+    private void Awake() => _anim = GetComponentInChildren<Animator>();
 
     // ── State switching ────────────────────────────────────────────────────────
 
@@ -64,10 +70,7 @@ public class AudienceMember : MonoBehaviour
     private void ApplyState(AudienceState state)
     {
         _currentState = state;
-
-        if (TryGetComponent<Animator>(out var anim))
-            anim.SetInteger(AnimStateId, (int)state);
-
+        if (_anim != null) _anim.SetInteger(AnimStateId, (int)state);
         Debug.Log($"[AudienceMember {avatarIndex}] → {state}");
     }
 
@@ -79,7 +82,9 @@ public class AudienceMember : MonoBehaviour
         _isGazed = gazed;
 
         if (gazed)
+        {
+            if (_anim != null) _anim.SetTrigger(GazeReactId);
             Debug.Log($"[AudienceMember {avatarIndex}] Gazed");
-        // Stage 7: play nod/look-back animation here
+        }
     }
 }

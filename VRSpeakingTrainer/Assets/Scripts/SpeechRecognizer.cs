@@ -26,6 +26,8 @@ public class SpeechRecognizer : MonoBehaviour
     [SerializeField] private bool mockMode = false;
     [Tooltip("Seconds between mock transcript events")]
     [SerializeField] private float mockInterval = 4f;
+    [Tooltip("Suppress transcript events while mock mode is on. Use when forcing audience state manually via AudienceRuleEngine debug controls.")]
+    [SerializeField] private bool mockMuted = false;
 
     // Mock phrases cycle through in order, covering a range of speech patterns.
     //
@@ -232,6 +234,7 @@ public class SpeechRecognizer : MonoBehaviour
         string phrase = MockPhrases[_mockPhraseIndex % MockPhrases.Length];
         _mockPhraseIndex++;
 
+        if (mockMuted) return;
         Debug.Log($"[SpeechRecognizer] Mock: \"{phrase}\"");
         OnTranscriptionResult?.Invoke(phrase, true);
     }
