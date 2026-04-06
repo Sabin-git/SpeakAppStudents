@@ -70,7 +70,7 @@ This roadmap reflects the current project plan and intended implementation order
   `SpeechAnalyzer`, WPM, pauses, filler-word tracking, HUD display
 - [x] Stage 6 - Rule Engine + Audience AI
   `AudienceRuleEngine`, `AudienceController`, audio behavior, plus `HeadTracker` gaze classification and timing
-- [x] Stage 7 - Avatar Animations
+- [ ] Stage 7 - Avatar Animations
   Animator controller, per-avatar randomisation, individual gaze reactions, polish
 - [ ] Stage 8 - Slide System - PC Pre-processing
   `convert_pptx.py`, `SlideController`, PNG slide loading, `notes.json`, volume-key navigation
