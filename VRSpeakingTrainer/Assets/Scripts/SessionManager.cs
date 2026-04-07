@@ -57,8 +57,11 @@ public class SessionManager : MonoBehaviour
 
     private void Start()
     {
-        // Auto-start when the Session scene loads.
-        // MainMenu saves the chosen duration to PlayerPrefs before loading this scene.
+        // Only auto-start when running inside the Session scene.
+        // Guards against SessionManager accidentally being placed in other scenes.
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Session")
+            return;
+
         StartSession();
     }
 

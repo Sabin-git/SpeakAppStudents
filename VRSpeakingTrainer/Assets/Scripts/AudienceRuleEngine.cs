@@ -20,7 +20,7 @@ public class AudienceRuleEngine : MonoBehaviour
 {
     public static event System.Action<AudienceState> OnStateChanged;
 
-    [Header("Debug — Force State")]
+    [Header("Debug Options")]
     [Tooltip("When enabled, ignores all rules and locks the audience to the state below.")]
     [SerializeField] private bool         debugForceState  = false;
     [SerializeField] private AudienceState debugForcedState = AudienceState.Neutral;
