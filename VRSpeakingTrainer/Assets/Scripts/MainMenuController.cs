@@ -96,6 +96,7 @@ public class MainMenuController : MonoBehaviour
         {
             int saved = Mathf.RoundToInt(PlayerPrefs.GetFloat("SessionDurationSeconds", 10f));
             devDurationInput.text = saved > 0 && saved < 900 ? saved.ToString() : "10";
+            devDurationInput.interactable = devDebugToggle != null && devDebugToggle.isOn;
         }
 
         if (devMockToggle != null && PlayerPrefs.HasKey("Dev_MockMode"))
@@ -206,6 +207,12 @@ public class MainMenuController : MonoBehaviour
     }
 
     // ── Dev panel — speech callbacks ───────────────────────────────────────────
+
+    /// <summary>Called by Debug Mode toggle onValueChanged.</summary>
+    public void OnDebugModeChanged(bool isOn)
+    {
+        if (devDurationInput != null) devDurationInput.interactable = isOn;
+    }
 
     /// <summary>Called by Mock Mode toggle onValueChanged.</summary>
     public void OnMockModeChanged(bool isOn)
