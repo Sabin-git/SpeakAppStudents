@@ -72,6 +72,21 @@ public class AudienceRuleEngine : MonoBehaviour
         _latestSpeech  = default;
         _latestHead    = default;
         _isRunning     = true;
+
+        // Apply dev panel settings from PlayerPrefs.
+        int startingState = PlayerPrefs.GetInt("Dev_StartingAudienceState", 0);
+        _currentState = (AudienceState)Mathf.Clamp(startingState, 0, 3);
+
+        int forcedState = PlayerPrefs.GetInt("Dev_ForceAudienceState", -1);
+        if (forcedState >= 0)
+        {
+            debugForceState  = true;
+            debugForcedState = (AudienceState)Mathf.Clamp(forcedState, 0, 3);
+        }
+        else
+        {
+            debugForceState = false;
+        }
     }
 
     private void HandleSessionEnd(SpeechMetrics _) => _isRunning = false;

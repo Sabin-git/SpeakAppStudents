@@ -71,8 +71,20 @@ public class HeadTracker : MonoBehaviour
 
     private void HandleSessionStart()
     {
-        _metrics  = default;
+        _metrics   = default;
         _isRunning = true;
+
+        // Apply gaze zone override from dev panel.
+        int zoneOverride = PlayerPrefs.GetInt("Dev_ForceGazeZone", -1);
+        if (zoneOverride >= 0)
+        {
+            debugOverrideZone = true;
+            debugZone         = (GazeZone)Mathf.Clamp(zoneOverride, 0, 2);
+        }
+        else
+        {
+            debugOverrideZone = false;
+        }
     }
 
     private void HandleSessionEnd(SpeechMetrics _)

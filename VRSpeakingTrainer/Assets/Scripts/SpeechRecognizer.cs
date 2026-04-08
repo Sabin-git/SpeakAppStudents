@@ -115,6 +115,11 @@ public class SpeechRecognizer : MonoBehaviour
         SessionManager.OnSessionStart += OnSessionStart;
         SessionManager.OnSessionEnd   += OnSessionEnd;
 
+        // Dev panel settings override Inspector defaults at runtime.
+        mockMode     = PlayerPrefs.GetInt  ("Dev_MockMode",     0)   == 1;
+        mockMuted    = PlayerPrefs.GetInt  ("Dev_MockMuted",    0)   == 1;
+        mockInterval = PlayerPrefs.GetFloat("Dev_MockInterval", 4f);
+
         if (!mockMode)
             StartCoroutine(LoadApiKey());
         else
@@ -170,7 +175,7 @@ public class SpeechRecognizer : MonoBehaviour
 
         if (string.IsNullOrEmpty(_apiKey))
         {
-            Debug.LogError("[SpeechRecognizer] Cannot start — no API key.");
+            Debug.Log("[SpeechRecognizer] API key not yet loaded — will start capture once key is ready.");
             return;
         }
 
@@ -197,7 +202,8 @@ public class SpeechRecognizer : MonoBehaviour
         if (!_isCapturing) return;
         _isCapturing = false;
         float[] remaining = ExtractSamples();
-        if (remaining.Length > 0) StartCoroutine(SendChunk(remaining));
+        if (remaining.Length > 0 && gameObject.activeInHierarchy)
+            StartCoroutine(SendChunk(remaining));
         Microphone.End(_micDevice);
         _micClip = null;
     }
