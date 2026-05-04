@@ -7,14 +7,29 @@ using UnityEngine;
 ///   30–70% of avatars switch immediately (randomised per instance).
 ///   The rest delay up to 5 seconds before switching.
 ///
-/// Drives an Animator "State" int parameter and "GazeReact" trigger on the
-/// child avatar model. Animator is looked up in children so the model FBX
-/// can sit as a child of AvatarAnchor.
+/// Drives an Animator "State" int, "Variant" float, and "GazeReact" trigger.
+/// Each state has N clip variants in a Blend Tree; Variant picks one at random
+/// whenever the avatar enters that state, so avatars in the same state still
+/// look different from each other.
+///
+/// Restless plays the same base clip as Neutral but randomly fires
+/// DistractionReaction one-shots at 2–8 second intervals.
+///
+/// _variantCounts and _distractionReactCount are populated automatically by
+/// AnimatorClipWirer (VR Trainer → Wire Animation Clips).
 /// </summary>
 public class AudienceMember : MonoBehaviour
 {
     [Tooltip("Avatar index 0–9. Set manually in the Inspector.")]
     public int avatarIndex;
+
+    [Tooltip("How many clip variants exist per state (Engaged/Neutral/Distracted/Restless). " +
+             "Set automatically by VR Trainer → Wire Animation Clips.")]
+    [SerializeField] private int[] _variantCounts = { 1, 1, 1, 1 };
+
+    [Tooltip("How many DistractionReaction clips are available. " +
+             "Set automatically by VR Trainer → Wire Animation Clips.")]
+    [SerializeField] private int _distractionReactCount = 2;
 
     private AudienceState _currentState = AudienceState.Neutral;
     private AudienceState _pendingState;
@@ -23,12 +38,19 @@ public class AudienceMember : MonoBehaviour
     private float         _switchTimer;
     private bool          _isGazed;
 
+    private float _reactTimer;
+    private float _nextReactDelay = 99f;
+
     private Animator _anim;
 
-    private static readonly int AnimStateId   = Animator.StringToHash("State");
-    private static readonly int GazeReactId   = Animator.StringToHash("GazeReact");
+    private static readonly int AnimStateId          = Animator.StringToHash("State");
+    private static readonly int VariantId            = Animator.StringToHash("Variant");
+    private static readonly int GazeReactId          = Animator.StringToHash("GazeReact");
+    private static readonly int DistractionReactId   = Animator.StringToHash("DistractionReact");
+    private static readonly int DistractionVariantId = Animator.StringToHash("DistractionReactVariant");
 
     private void Awake() => _anim = GetComponentInChildren<Animator>();
+    private void Start()  => ApplyState(_currentState);
 
     // ── State switching ────────────────────────────────────────────────────────
 
@@ -40,7 +62,6 @@ public class AudienceMember : MonoBehaviour
             return;
         }
 
-        // 30–70% chance of switching immediately (randomised per avatar instance)
         float immediateChance = Random.Range(0.3f, 0.7f);
         if (Random.value < immediateChance)
         {
@@ -57,21 +78,56 @@ public class AudienceMember : MonoBehaviour
 
     private void Update()
     {
-        if (!_hasPending) return;
-
-        _switchTimer += Time.deltaTime;
-        if (_switchTimer >= _switchDelay)
+        if (_hasPending)
         {
-            ApplyState(_pendingState);
-            _hasPending = false;
+            _switchTimer += Time.deltaTime;
+            if (_switchTimer >= _switchDelay)
+            {
+                ApplyState(_pendingState);
+                _hasPending = false;
+            }
+        }
+
+        if (_currentState == AudienceState.Restless && _distractionReactCount > 0)
+        {
+            _reactTimer += Time.deltaTime;
+            if (_reactTimer >= _nextReactDelay)
+            {
+                FireDistractionReaction();
+                ScheduleNextReaction();
+            }
         }
     }
 
     private void ApplyState(AudienceState state)
     {
         _currentState = state;
-        if (_anim != null) _anim.SetInteger(AnimStateId, (int)state);
+        if (_anim == null) return;
+
+        int stateIdx = (int)state;
+        int count    = (stateIdx < _variantCounts.Length) ? _variantCounts[stateIdx] : 1;
+        _anim.SetFloat(VariantId, Random.Range(0, Mathf.Max(1, count)));
+        _anim.SetInteger(AnimStateId, stateIdx);
+
+        if (state == AudienceState.Restless)
+            ScheduleNextReaction();
+
         Debug.Log($"[AudienceMember {avatarIndex}] → {state}");
+    }
+
+    // ── Distraction reactions (Restless state) ─────────────────────────────────
+
+    private void ScheduleNextReaction()
+    {
+        _reactTimer     = 0f;
+        _nextReactDelay = Random.Range(2f, 8f);
+    }
+
+    private void FireDistractionReaction()
+    {
+        if (_anim == null) return;
+        _anim.SetFloat(DistractionVariantId, Random.Range(0, Mathf.Max(1, _distractionReactCount)));
+        _anim.SetTrigger(DistractionReactId);
     }
 
     // ── Gaze reaction ──────────────────────────────────────────────────────────
@@ -87,4 +143,11 @@ public class AudienceMember : MonoBehaviour
             Debug.Log($"[AudienceMember {avatarIndex}] Gazed");
         }
     }
+
+    // ── Called by AnimatorClipWirer editor tool ────────────────────────────────
+
+#if UNITY_EDITOR
+    public void SetVariantCounts(int[] counts) => _variantCounts = (int[])counts.Clone();
+    public void SetDistractionReactCount(int count) => _distractionReactCount = count;
+#endif
 }
