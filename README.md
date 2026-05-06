@@ -7,8 +7,7 @@ This repository contains the active Unity project in [VRSpeakingTrainer](VRSpeak
 ## Project Goals
 
 - Practice public speaking in a virtual classroom on Android with Google Cardboard.
-- Run fully offline at runtime.
-- Use on-device speech recognition with Vosk.
+- Use real-time speech recognition (Google Cloud STT) with a mock mode for offline testing.
 - Keep audience adaptation deterministic and explainable through a rule-based system.
 - Provide end-of-session feedback based on speech and gaze metrics.
 
@@ -16,10 +15,10 @@ This repository contains the active Unity project in [VRSpeakingTrainer](VRSpeak
 
 - Engine: Unity 6.4
 - VR SDK: Google Cardboard XR Plugin
-- Speech recognition: Vosk offline model
+- Speech recognition: Google Cloud Speech-to-Text REST API (with developer mock mode for offline testing)
 - Target platform: Android, IL2CPP, ARM64, min API 26, target API 35
 - UI: TextMeshPro
-- Assets: Unity built-ins, ProBuilder, Mixamo, Vosk
+- Assets: Unity built-ins, ProBuilder, Mixamo
 
 ### Current Scene Structure
 
@@ -48,11 +47,7 @@ This repository contains the active Unity project in [VRSpeakingTrainer](VRSpeak
 
 ## Current Implementation Status
 
-The project is still under staged development. Broadly:
-
-- Stage 1 `VR Foundation`: complete
-- Stage 2 `Classroom Environment`: in progress, with the classroom, lectern, gaze targets, and 10-seat layout now established
-- Stage 3+ systems exist only partially as stubs or early implementations
+Stages 1–6 are complete. The project is mid-way through Stages 7b and 7c (visual overhaul and developer tooling). The core session loop is fully functional: session start → speech recognition → speech metrics → rule-based audience AI → head tracking → session end → results screen. A developer panel on the main menu allows testing without the real API.
 
 ## Development Stages
 
@@ -61,27 +56,29 @@ This roadmap reflects the current project plan and intended implementation order
 - [x] Stage 1 - VR Foundation
   Cardboard rig, scenes, first Android build
 - [x] Stage 2 - Classroom Environment
-  ProBuilder room, 10 avatars in 2x5 rows, decorative blackboard on back wall, angled lectern with slide and notes panels, `AudienceTarget` and `LecternTarget`
+  ProBuilder room, 10 avatars in 2×5 rows, decorative blackboard on back wall, angled lectern with slide and notes panels, `AudienceTarget` and `LecternTarget`
 - [x] Stage 3 - Session System
-  `SessionManager`, user-set countdown timer, screen-space HUD, pause menu, volume key slide control stub
-- [x] Stage 4 - Vosk Integration
-  Microphone input, transcription, live transcript on HUD
+  `SessionManager`, user-set countdown timer, screen-space HUD, pause menu with Finish/Exit/Resume, volume key slide control stub
+- [x] Stage 4 - Google Cloud STT Integration
+  `SpeechRecognizer.cs`, 5s audio chunks, REST API, live transcript on HUD
 - [x] Stage 5 - Speech Metrics
-  `SpeechAnalyzer`, WPM, pauses, filler-word tracking, HUD display
+  `SpeechAnalyzer`, WPM rolling window, pause detection, filler-word tracking, HUD display
 - [x] Stage 6 - Rule Engine + Audience AI
-  `AudienceRuleEngine`, `AudienceController`, audio behavior, plus `HeadTracker` gaze classification and timing
-- [ ] Stage 7 - Avatar Animations
-  Animator controller, per-avatar randomisation, individual gaze reactions, polish
-- [ ] Stage 8 - Slide System - PC Pre-processing
-  `convert_pptx.py`, `SlideController`, PNG slide loading, `notes.json`, volume-key navigation
-- [ ] Stage 9 - Integration + Hardening
-  End-to-end testing, GC profiling, signed APK
-- [ ] Stage 10 - Results UI
-  Speech stats, gaze zone breakdown, percentages and raw seconds, tip generation
-- [ ] Stage 11 - On-device PPTX Parsing
-  Android file picker and runtime PPTX-to-slides-and-notes pipeline
+  `AudienceRuleEngine` rule table + head modifiers, `AudienceController` state propagation + audio crossfade, `HeadTracker` zone classification + per-avatar gaze
+- [ ] Stage 7b - Visual Overhaul *(in progress)*
+  Dark academic theme on all scenes; `ResultsUI.cs` with scored breakdown; metrics persisted via PlayerPrefs; Results scene UI build in Unity Editor pending
+- [ ] Stage 7c - Developer Panel *(in progress)*
+  `MainMenuController.cs` rewrite; developer overlay with debug mode, mock mode, custom duration, audience/gaze overrides; Unity Editor wiring mostly complete — Audience and Gaze sections pending
+- [ ] Stage 8 - Avatar Animations
+  AnimatorController with `State` int parameter; per-avatar randomised switch delay; individual gaze reactions; idle animations per state
+- [ ] Stage 9 - Slide System (PC Pipeline)
+  `convert_pptx.py` tool; `SlideController.cs` loading PNGs + `notes.json`; volume-key navigation; fallback to blank if no slides
+- [ ] Stage 10 - Integration + Hardening
+  End-to-end test pass on device, GC profiling, signed APK
+- [ ] Stage 11 - On-device PPTX Parsing *(stretch)*
+  Android file picker on MainMenu, runtime PPTX → PNG + notes pipeline
 - [ ] Stage 12 - User Study Prep
-  Protocol, questionnaire, multiple avatar models, final build
+  Multiple avatar models, study protocol, questionnaire, final polished build
 
 ## Big TODO
 
@@ -90,15 +87,20 @@ This roadmap reflects the current project plan and intended implementation order
 
 ### Scripts Currently Present
 
-- `SessionManager.cs`
-- `XRLifecycleManager.cs`
-- `SpeechMetrics.cs`
-- `HeadTracker.cs`
-- `SlideController.cs`
-- `HUDController.cs`
-- `Editor/ClassroomBuilder.cs`
-
-Several later-stage systems described in the design docs are still planned but not implemented yet, including full Vosk transcription, speech analysis, audience rule evaluation, avatar behavior, and results reporting.
+- `SessionManager.cs` — session lifecycle, timer, pause menu
+- `XRLifecycleManager.cs` — Cardboard XR rig management
+- `SpeechRecognizer.cs` — Google Cloud STT, mic input, mock mode
+- `SpeechAnalyzer.cs` — WPM, pauses, filler words
+- `SpeechMetrics.cs` — shared data struct
+- `AudienceRuleEngine.cs` — rule table + head modifiers → AudienceState
+- `AudienceController.cs` — state propagation, audio crossfade
+- `AudienceMember.cs` — per-avatar state, randomised switching
+- `HeadTracker.cs` — gaze zone classification, time accumulation
+- `HUDController.cs` — screen-space countdown + transcript HUD
+- `SlideController.cs` — slide index, texture swap, notes text
+- `MainMenuController.cs` — main menu panels, developer settings
+- `ResultsUI.cs` — post-session scored breakdown
+- `Editor/ClassroomBuilder.cs` — editor utility (not a runtime script)
 
 ## Core Constraints
 
