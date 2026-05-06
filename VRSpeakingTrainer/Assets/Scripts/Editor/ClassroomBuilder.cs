@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
@@ -320,6 +321,119 @@ public static class ClassroomBuilder
         }
 
         Debug.Log($"[ClassroomBuilder] Removed {count} placeholder objects.");
+    }
+
+    // ── Menu: Randomize avatar models ────────────────────────────────────────
+
+    public static void RandomizeAvatarModels()
+    {
+        var classroom = GameObject.Find("Classroom");
+        if (classroom == null)
+        {
+            Debug.LogWarning("[ClassroomBuilder] No 'Classroom' found. Run 'Build Classroom Layout' first.");
+            return;
+        }
+
+        var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+            "Assets/Animations/AudienceAnimator.controller");
+        if (controller == null)
+            Debug.LogWarning("[ClassroomBuilder] AudienceAnimator.controller not found — Animators will have no controller assigned.");
+
+        // Collect all Ch*.fbx character models (not animation FBXes) from the Avatars folder
+        var prefabs = new List<GameObject>();
+        string[] guids = AssetDatabase.FindAssets("t:Model", new[] { "Assets/Models/Avatars" });
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!System.IO.Path.GetFileNameWithoutExtension(path).StartsWith("Ch")) continue;
+            var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (go != null) prefabs.Add(go);
+        }
+
+        if (prefabs.Count == 0)
+        {
+            Debug.LogWarning("[ClassroomBuilder] No Ch*.fbx character models found in Assets/Models/Avatars/.");
+            return;
+        }
+
+        // Fisher-Yates shuffle so every seat gets a unique model (cycles if seats > models)
+        for (int i = prefabs.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (prefabs[i], prefabs[j]) = (prefabs[j], prefabs[i]);
+        }
+
+        // Collect AvatarAnchor transforms sorted by their parent Desk name (Desk_00 … Desk_09)
+        var anchors = new List<Transform>();
+        foreach (Transform t in classroom.GetComponentsInChildren<Transform>(true))
+            if (t.name == "AvatarAnchor") anchors.Add(t);
+
+        anchors.Sort((a, b) =>
+        {
+            string na = a.parent != null ? a.parent.name : a.name;
+            string nb = b.parent != null ? b.parent.name : b.name;
+            return string.Compare(na, nb, System.StringComparison.Ordinal);
+        });
+
+        for (int i = 0; i < anchors.Count; i++)
+        {
+            Transform anchor = anchors[i];
+
+            // Clear any existing children (placeholders or previous models)
+            for (int c = anchor.childCount - 1; c >= 0; c--)
+                Undo.DestroyObjectImmediate(anchor.GetChild(c).gameObject);
+
+            // Instantiate character (cycles through models if there are more seats than models)
+            var prefab   = prefabs[i % prefabs.Count];
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, anchor);
+            Undo.RegisterCreatedObjectUndo(instance, "Randomize Avatar Models");
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale    = Vector3.one;
+
+            // Wire up the audience animator controller and disable root motion so
+            // sitting animations never move the character vertically into the floor
+            var anim = instance.GetComponentInChildren<Animator>();
+            if (anim != null)
+            {
+                Undo.RecordObject(anim, "Randomize Avatar Models");
+                anim.applyRootMotion = false;
+                if (controller != null)
+                    anim.runtimeAnimatorController = controller;
+                EditorUtility.SetDirty(anim);
+                EditorUtility.SetDirty(instance);
+            }
+
+            // Add AudienceMember to the anchor if missing and set its index
+            var member = anchor.GetComponent<AudienceMember>();
+            if (member == null)
+                member = Undo.AddComponent<AudienceMember>(anchor.gameObject);
+            Undo.RecordObject(member, "Randomize Avatar Models");
+            member.avatarIndex = i;
+
+            EditorUtility.SetDirty(anchor.gameObject);
+        }
+
+        Debug.Log($"[ClassroomBuilder] Placed {prefabs.Count} unique model(s) across {anchors.Count} seat(s).");
+    }
+
+    [MenuItem("VR Trainer/Clear Avatar Models")]
+    public static void ClearAvatarModels()
+    {
+        var classroom = GameObject.Find("Classroom");
+        if (classroom == null) { Debug.LogWarning("[ClassroomBuilder] No 'Classroom' found."); return; }
+
+        int count = 0;
+        foreach (Transform t in classroom.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name != "AvatarAnchor") continue;
+            for (int c = t.childCount - 1; c >= 0; c--)
+            {
+                Undo.DestroyObjectImmediate(t.GetChild(c).gameObject);
+                count++;
+            }
+        }
+        Debug.Log($"[ClassroomBuilder] Cleared {count} avatar model(s).");
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
