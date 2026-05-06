@@ -20,7 +20,7 @@ public class AudienceRuleEngine : MonoBehaviour
 {
     public static event System.Action<AudienceState> OnStateChanged;
 
-    [Header("Debug — Force State")]
+    [Header("Debug Options")]
     [Tooltip("When enabled, ignores all rules and locks the audience to the state below.")]
     [SerializeField] private bool         debugForceState  = false;
     [SerializeField] private AudienceState debugForcedState = AudienceState.Neutral;
@@ -72,6 +72,21 @@ public class AudienceRuleEngine : MonoBehaviour
         _latestSpeech  = default;
         _latestHead    = default;
         _isRunning     = true;
+
+        // Apply dev panel settings from PlayerPrefs.
+        int startingState = PlayerPrefs.GetInt("Dev_StartingAudienceState", 0);
+        _currentState = (AudienceState)Mathf.Clamp(startingState, 0, 3);
+
+        int forcedState = PlayerPrefs.GetInt("Dev_ForceAudienceState", -1);
+        if (forcedState >= 0)
+        {
+            debugForceState  = true;
+            debugForcedState = (AudienceState)Mathf.Clamp(forcedState, 0, 3);
+        }
+        else
+        {
+            debugForceState = false;
+        }
     }
 
     private void HandleSessionEnd(SpeechMetrics _) => _isRunning = false;

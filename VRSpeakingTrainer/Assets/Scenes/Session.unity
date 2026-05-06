@@ -8022,7 +8022,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 70716461}
   - {fileID: 44037966}
-  - {fileID: 1251286836}
   - {fileID: 3100000002}
   - {fileID: 5000002}
   - {fileID: 4000002}
