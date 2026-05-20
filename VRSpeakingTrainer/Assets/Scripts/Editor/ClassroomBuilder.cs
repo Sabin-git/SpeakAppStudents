@@ -334,6 +334,10 @@ public static class ClassroomBuilder
             return;
         }
 
+        // Strip any stray AudienceMember components from non-AvatarAnchor GameObjects
+        // before re-assigning indices, so duplicates can't survive a rebuild.
+        StripStrayAudienceMembers(classroom);
+
         var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
             "Assets/Animations/AudienceAnimator.controller");
         if (controller == null)
@@ -415,6 +419,34 @@ public static class ClassroomBuilder
         }
 
         Debug.Log($"[ClassroomBuilder] Placed {prefabs.Count} unique model(s) across {anchors.Count} seat(s).");
+    }
+
+    [MenuItem("VR Trainer/Sanitize Audience Setup")]
+    public static void SanitizeAudienceSetup()
+    {
+        var classroom = GameObject.Find("Classroom");
+        if (classroom == null) { Debug.LogWarning("[ClassroomBuilder] No 'Classroom' found."); return; }
+        int removed = StripStrayAudienceMembers(classroom);
+        Debug.Log($"[ClassroomBuilder] Sanitize: removed {removed} stray AudienceMember component(s).");
+    }
+
+    // Removes AudienceMember from anything other than an AvatarAnchor — guards
+    // against duplicate components from older builds or manual edits that would
+    // make FindObjectsByType<AudienceMember> return more items than there are seats.
+    private static int StripStrayAudienceMembers(GameObject classroom)
+    {
+        int removed = 0;
+        var members = classroom.GetComponentsInChildren<AudienceMember>(true);
+        foreach (var m in members)
+        {
+            if (m == null) continue;
+            if (m.gameObject.name != "AvatarAnchor")
+            {
+                Undo.DestroyObjectImmediate(m);
+                removed++;
+            }
+        }
+        return removed;
     }
 
     [MenuItem("VR Trainer/Clear Avatar Models")]

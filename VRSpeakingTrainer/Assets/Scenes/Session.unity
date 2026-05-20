@@ -1523,7 +1523,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 57259441}
-  - component: {fileID: 57259442}
   m_Layer: 0
   m_Name: Desk_07
   m_TagString: Untagged
@@ -1549,21 +1548,6 @@ Transform:
   - {fileID: 1957323651}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &57259442
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 57259440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 7
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &70716458
 GameObject:
   m_ObjectHideFlags: 0
@@ -2267,7 +2251,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 336857226}
-  - component: {fileID: 336857227}
   m_Layer: 0
   m_Name: Desk_09
   m_TagString: Untagged
@@ -2293,21 +2276,6 @@ Transform:
   - {fileID: 924879960}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &336857227
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 336857225}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 9
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &339313372
 GameObject:
   m_ObjectHideFlags: 0
@@ -2353,7 +2321,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudienceController
   headTracker: {fileID: 1443868845}
-  activeAudienceCount: 10
+  activeAudienceCount: 7
   clipEngaged: {fileID: 0}
   clipNeutral: {fileID: 0}
   clipDistracted: {fileID: 0}
@@ -2480,7 +2448,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 363439439}
-  - component: {fileID: 363439440}
   m_Layer: 0
   m_Name: Desk_01
   m_TagString: Untagged
@@ -2506,21 +2473,6 @@ Transform:
   - {fileID: 916542618}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &363439440
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 363439438}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 1
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &458438275
 GameObject:
   m_ObjectHideFlags: 0
@@ -2804,7 +2756,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 527181242}
-  - component: {fileID: 527181243}
   m_Layer: 0
   m_Name: Desk_03
   m_TagString: Untagged
@@ -2830,21 +2781,6 @@ Transform:
   - {fileID: 1647259427}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &527181243
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 527181241}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 3
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &538148030
 GameObject:
   m_ObjectHideFlags: 0
@@ -3617,7 +3553,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 809561386}
-  - component: {fileID: 809561387}
   m_Layer: 0
   m_Name: Desk_08
   m_TagString: Untagged
@@ -3643,21 +3578,6 @@ Transform:
   - {fileID: 1969036611}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &809561387
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 809561385}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 8
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1001 &892947069
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4246,7 +4166,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 969342337}
-  - component: {fileID: 969342338}
   m_Layer: 0
   m_Name: Desk_00
   m_TagString: Untagged
@@ -4272,21 +4191,6 @@ Transform:
   - {fileID: 1605225162}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &969342338
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 969342336}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 0
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &1017784738
 GameObject:
   m_ObjectHideFlags: 0
@@ -4408,7 +4312,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1032203122}
-  - component: {fileID: 1032203123}
   m_Layer: 0
   m_Name: Desk_04
   m_TagString: Untagged
@@ -4434,21 +4337,6 @@ Transform:
   - {fileID: 330666659}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1032203123
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1032203121}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 4
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &1033527399
 GameObject:
   m_ObjectHideFlags: 0
@@ -5611,7 +5499,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1342189558}
-  - component: {fileID: 1342189559}
   m_Layer: 0
   m_Name: Desk_02
   m_TagString: Untagged
@@ -5637,21 +5524,6 @@ Transform:
   - {fileID: 1239545030}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1342189559
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1342189557}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 2
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &1346880482
 GameObject:
   m_ObjectHideFlags: 0
@@ -6706,7 +6578,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1720452832}
-  - component: {fileID: 1720452833}
   m_Layer: 0
   m_Name: Desk_05
   m_TagString: Untagged
@@ -6732,21 +6603,6 @@ Transform:
   - {fileID: 798697325}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1720452833
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1720452831}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 5
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &1721483305
 GameObject:
   m_ObjectHideFlags: 0
@@ -6980,7 +6836,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1742062494}
-  - component: {fileID: 1742062495}
   m_Layer: 0
   m_Name: Desk_06
   m_TagString: Untagged
@@ -7006,21 +6861,6 @@ Transform:
   - {fileID: 766423951}
   m_Father: {fileID: 522280887}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1742062495
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1742062493}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08d490150dbf22543a6b6cbf45cf4020, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AudienceMember
-  avatarIndex: 6
-  _variantCounts: 01000000010000000100000001000000
-  _distractionReactCount: 2
 --- !u!1 &1812192253
 GameObject:
   m_ObjectHideFlags: 0
