@@ -152,10 +152,11 @@ public class SessionManager : MonoBehaviour
         if (!IsRunning) return;
         IsRunning = false;
         _finalMetrics.sessionTime = ElapsedSeconds;
+        // SpeechAnalyzer.HandleSessionEnd runs inside this Invoke and writes
+        // Results_AvgWPM and Results_FillerCount from the full session
+        // transcript. HeadTracker.HandleSessionEnd writes the gaze totals.
         OnSessionEnd?.Invoke(_finalMetrics);
         Debug.Log($"[SessionManager] Session ended. Elapsed: {ElapsedSeconds:F1}s");
-        PlayerPrefs.SetFloat("Results_AvgWPM",      _finalMetrics.rollingAvgWpm);
-        PlayerPrefs.SetInt  ("Results_FillerCount", _finalMetrics.fillerCount);
         PlayerPrefs.SetFloat("Results_SessionTime", _finalMetrics.sessionTime);
         PlayerPrefs.Save();
         SceneManager.LoadScene("Results");

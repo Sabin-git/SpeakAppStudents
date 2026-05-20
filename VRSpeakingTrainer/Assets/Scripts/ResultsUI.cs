@@ -44,6 +44,11 @@ public class ResultsUI : MonoBehaviour
     [SerializeField] private Image           pacingBar;
     [SerializeField] private TextMeshProUGUI pacingPct;
 
+    [Header("Raw Metrics (optional — mirrors SpeechAnalyzer's end-of-session log)")]
+    [SerializeField] private TextMeshProUGUI wordsText;
+    [SerializeField] private TextMeshProUGUI fillersText;
+    [SerializeField] private TextMeshProUGUI wpmText;
+
     // ── Debug value pools ──────────────────────────────────────────────────────
     // Each pool covers a range of realistic values — good, average, and poor —
     // so the UI bars visibly move around on repeated runs in debug mode.
@@ -71,7 +76,7 @@ public class ResultsUI : MonoBehaviour
         bool debugMode = PlayerPrefs.GetInt("DebugMode", 0) == 1;
 
         float avgWpm, duration, audience, lectern, other;
-        int   fillers;
+        int   fillers, words;
 
         // Session duration is always the real value regardless of debug mode.
         duration = PlayerPrefs.GetFloat("Results_SessionTime", 0f);
@@ -83,11 +88,15 @@ public class ResultsUI : MonoBehaviour
             audience = DebugAudience[Random.Range(0, DebugAudience.Length)];
             lectern  = DebugLectern [Random.Range(0, DebugLectern.Length)];
             other    = DebugOther   [Random.Range(0, DebugOther.Length)];
+            // No words pool — derive from the random WPM so the three raw
+            // values stay internally consistent (words ≈ wpm × minutes).
+            words    = Mathf.RoundToInt(avgWpm * duration / 60f);
         }
         else
         {
             avgWpm   = PlayerPrefs.GetFloat("Results_AvgWPM",        0f);
             fillers  = PlayerPrefs.GetInt  ("Results_FillerCount",    0);
+            words    = PlayerPrefs.GetInt  ("Results_TotalWords",     0);
             audience = PlayerPrefs.GetFloat("Results_TimeOnAudience", 0f);
             lectern  = PlayerPrefs.GetFloat("Results_TimeOnLectern",  0f);
             other    = PlayerPrefs.GetFloat("Results_TimeOnOther",    0f);
@@ -99,6 +108,14 @@ public class ResultsUI : MonoBehaviour
         int   overall     = Mathf.RoundToInt(speechScore * 0.35f + fillerScore * 0.25f + gazeScore * 0.40f);
 
         PopulateUI(overall, speechScore, fillerScore, gazeScore, duration);
+        PopulateRawMetrics(words, fillers, avgWpm);
+    }
+
+    private void PopulateRawMetrics(int words, int fillers, float avgWpm)
+    {
+        if (wordsText   != null) wordsText.text   = $"Words: {words}";
+        if (fillersText != null) fillersText.text = $"Fillers: {fillers}";
+        if (wpmText     != null) wpmText.text     = $"Avg WPM: {Mathf.RoundToInt(avgWpm)}";
     }
 
     // ── Score computations ─────────────────────────────────────────────────────
