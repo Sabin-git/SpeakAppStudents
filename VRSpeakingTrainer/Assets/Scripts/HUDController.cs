@@ -47,8 +47,8 @@ public class HUDController : MonoBehaviour
     private void HandleSessionStart()
     {
         if (timerLabel      != null) timerLabel.gameObject.SetActive(true);
-        if (transcriptLabel != null) { transcriptLabel.text = ""; transcriptLabel.gameObject.SetActive(true); }
-        if (wpmLabel        != null) { wpmLabel.text = "0 WPM"; wpmLabel.gameObject.SetActive(true); }
+        if (transcriptLabel != null) { transcriptLabel.text = Localization.Get("hud_transcript_placeholder"); transcriptLabel.gameObject.SetActive(true); }
+        if (wpmLabel        != null) { wpmLabel.text = Localization.Get("hud_wpm_zero"); wpmLabel.gameObject.SetActive(true); }
     }
 
     private void HandleSessionEnd(SpeechMetrics _)
@@ -67,6 +67,8 @@ public class HUDController : MonoBehaviour
     private void HandleMetrics(SpeechMetrics m)
     {
         if (wpmLabel == null) return;
-        wpmLabel.text = $"{Mathf.RoundToInt(m.wpm)} WPM";
+        string template = Localization.Get("hud_wpm_format");
+        try   { wpmLabel.text = string.Format(template, Mathf.RoundToInt(m.wpm)); }
+        catch { wpmLabel.text = Mathf.RoundToInt(m.wpm) + " WPM"; }
     }
 }

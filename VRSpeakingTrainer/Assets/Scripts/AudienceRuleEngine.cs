@@ -28,9 +28,21 @@ public class AudienceRuleEngine : MonoBehaviour
     [Header("Thresholds")]
     [SerializeField] private float minHoldSec          = 4f;
     [SerializeField] private float highWpmSustainSec   = 20f;
-    [SerializeField] private float lowWpmSustainSec    = 8f;   // seconds of wpm < 80 before Distracted
+    [SerializeField] private float lowWpmSustainSec    = 8f;   // seconds below the low-WPM threshold before Distracted
     [SerializeField] private float lecternSustainSec   = 5f;
     [SerializeField] private float otherSustainSec     = 5f;
+
+    // Per-language WPM thresholds — picked once at session start from the
+    // Language PlayerPref. Dutch speakers conversationally pace ~10% slower
+    // than English, so the Engaged band shifts down and the low/high bounds
+    // shift with it (locked in the user-testing plan, Task 1 decisions).
+    //
+    //   English: Engaged 110–160, Distracted-low <80, Distracted-high >180
+    //   Dutch  : Engaged  90–140, Distracted-low <70, Distracted-high >160
+    private float _wpmEngagedLow  = 110f;
+    private float _wpmEngagedHigh = 160f;
+    private float _wpmLowThresh   =  80f;
+    private float _wpmHighThresh  = 180f;
 
     private AudienceState _currentState = AudienceState.Neutral;
     private float         _holdTimer;           // time since last state change
@@ -72,6 +84,24 @@ public class AudienceRuleEngine : MonoBehaviour
         _latestSpeech  = default;
         _latestHead    = default;
         _isRunning     = true;
+
+        // Language pref read once per session — picks WPM thresholds.
+        // Never re-read mid-session.
+        string lang = PlayerPrefs.GetString("Language", Localization.LangEnglish);
+        if (lang == Localization.LangDutch)
+        {
+            _wpmEngagedLow  =  90f;
+            _wpmEngagedHigh = 140f;
+            _wpmLowThresh   =  70f;
+            _wpmHighThresh  = 160f;
+        }
+        else
+        {
+            _wpmEngagedLow  = 110f;
+            _wpmEngagedHigh = 160f;
+            _wpmLowThresh   =  80f;
+            _wpmHighThresh  = 180f;
+        }
 
         // Apply dev panel settings from PlayerPrefs.
         int startingState = PlayerPrefs.GetInt("Dev_StartingAudienceState", 0);
@@ -131,13 +161,14 @@ public class AudienceRuleEngine : MonoBehaviour
         if (!_isRunning || debugForceState) return;
         _latestSpeech = s;
 
-        // Sustained WPM timers — increment by emit interval (~2s each call)
-        if (s.wpm > 180f)
+        // Sustained WPM timers — increment by emit interval (~2s each call).
+        // Thresholds are language-dependent (set in HandleSessionStart).
+        if (s.wpm > _wpmHighThresh)
             _highWpmTimer += 2f;
         else
             _highWpmTimer = 0f;
 
-        if (s.wpm > 0f && s.wpm < 80f)
+        if (s.wpm > 0f && s.wpm < _wpmLowThresh)
             _lowWpmTimer += 2f;
         else
             _lowWpmTimer = 0f;
@@ -168,8 +199,8 @@ public class AudienceRuleEngine : MonoBehaviour
         if (pause >= 3f || _lowWpmTimer >= lowWpmSustainSec || _highWpmTimer >= highWpmSustainSec)
             return AudienceState.Distracted;
 
-        // Priority 3
-        if (wpm >= 110f && wpm <= 160f && fillers < 2)
+        // Priority 3 — Engaged band is language-dependent
+        if (wpm >= _wpmEngagedLow && wpm <= _wpmEngagedHigh && fillers < 2)
             return AudienceState.Engaged;
 
         // Priority 4 — default

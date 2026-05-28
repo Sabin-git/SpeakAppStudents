@@ -74,6 +74,10 @@ public class ResultsUI : MonoBehaviour
     private void Start()
     {
         bool debugMode = PlayerPrefs.GetInt("DebugMode", 0) == 1;
+        // Read language once at Start so the WPM band and all UI strings stay
+        // consistent for the duration of the Results screen, even if the user
+        // somehow changes the Language pref while looking at it.
+        bool dutch     = PlayerPrefs.GetString("Language", Localization.LangEnglish) == Localization.LangDutch;
 
         float avgWpm, duration, audience, lectern, other;
         int   fillers, words;
@@ -102,7 +106,7 @@ public class ResultsUI : MonoBehaviour
             other    = PlayerPrefs.GetFloat("Results_TimeOnOther",    0f);
         }
 
-        float speechScore = ComputeWpmScore(avgWpm);
+        float speechScore = ComputeWpmScore(avgWpm, dutch);
         float fillerScore = ComputeFillerScore(fillers, duration);
         float gazeScore   = ComputeGazeScore(audience, lectern + other);
         int   overall     = Mathf.RoundToInt(speechScore * 0.35f + fillerScore * 0.25f + gazeScore * 0.40f);
@@ -113,19 +117,38 @@ public class ResultsUI : MonoBehaviour
 
     private void PopulateRawMetrics(int words, int fillers, float avgWpm)
     {
-        if (wordsText   != null) wordsText.text   = $"Words: {words}";
-        if (fillersText != null) fillersText.text = $"Fillers: {fillers}";
-        if (wpmText     != null) wpmText.text     = $"Avg WPM: {Mathf.RoundToInt(avgWpm)}";
+        if (wordsText   != null) wordsText.text   = Format(Localization.Get("results_words_format"),   words);
+        if (fillersText != null) fillersText.text = Format(Localization.Get("results_fillers_format"), fillers);
+        if (wpmText     != null) wpmText.text     = Format(Localization.Get("results_wpm_format"),     Mathf.RoundToInt(avgWpm));
+    }
+
+    // Defensive wrapper around string.Format — falls back to a "label: value"
+    // composition if the localized template is missing or malformed. Keeps
+    // the UI usable even when a translation key has been forgotten.
+    private static string Format(string template, object arg)
+    {
+        if (string.IsNullOrEmpty(template)) return arg != null ? arg.ToString() : string.Empty;
+        try   { return string.Format(template, arg); }
+        catch { return $"{template} {arg}"; }
     }
 
     // ── Score computations ─────────────────────────────────────────────────────
 
-    private static float ComputeWpmScore(float avgWpm)
+    // WPM score curve scales with language. The Dutch band is shifted down
+    // to match conversational pacing in Dutch (90–140 vs English 110–160);
+    // the lower/upper falloff endpoints shift by the same amount so the
+    // shape of the curve is preserved.
+    private static float ComputeWpmScore(float avgWpm, bool dutch)
     {
-        if (avgWpm <= 0f)                     return 0f;
-        if (avgWpm >= 110f && avgWpm <= 160f) return 100f;
-        if (avgWpm < 110f)                    return Mathf.InverseLerp(60f,  110f, avgWpm) * 100f;
-        return                                       Mathf.InverseLerp(220f, 160f, avgWpm) * 100f;
+        float lowIdeal  = dutch ?  90f : 110f;
+        float highIdeal = dutch ? 140f : 160f;
+        float lowFloor  = dutch ?  40f :  60f;   // score 0 below this
+        float highFloor = dutch ? 200f : 220f;   // score 0 above this
+
+        if (avgWpm <= 0f)                                return 0f;
+        if (avgWpm >= lowIdeal && avgWpm <= highIdeal)   return 100f;
+        if (avgWpm <  lowIdeal)                          return Mathf.InverseLerp(lowFloor,  lowIdeal,  avgWpm) * 100f;
+        return                                                  Mathf.InverseLerp(highFloor, highIdeal, avgWpm) * 100f;
     }
 
     private static float ComputeFillerScore(int fillers, float durationSeconds)
@@ -165,27 +188,29 @@ public class ResultsUI : MonoBehaviour
 
     private static string ToGrade(int score)
     {
-        if (score >= 85) return "A";
-        if (score >= 70) return "B";
-        if (score >= 55) return "C";
-        if (score >= 40) return "D";
-        return "F";
+        if (score >= 85) return Localization.Get("results_grade_a");
+        if (score >= 70) return Localization.Get("results_grade_b");
+        if (score >= 55) return Localization.Get("results_grade_c");
+        if (score >= 40) return Localization.Get("results_grade_d");
+        return                  Localization.Get("results_grade_f");
     }
 
     private static string ToCaption(int score)
     {
-        if (score >= 85) return "Excellent!";
-        if (score >= 70) return "Good Job!";
-        if (score >= 55) return "Keep Practicing!";
-        if (score >= 40) return "Needs Work";
-        return "Try Again";
+        if (score >= 85) return Localization.Get("results_caption_excellent");
+        if (score >= 70) return Localization.Get("results_caption_good");
+        if (score >= 55) return Localization.Get("results_caption_keep");
+        if (score >= 40) return Localization.Get("results_caption_needs");
+        return                  Localization.Get("results_caption_try");
     }
 
     private static string FormatTime(float seconds)
     {
         int m = (int)seconds / 60;
         int s = (int)seconds % 60;
-        return $"Session: {m}:{s:D2}";
+        string template = Localization.Get("results_session_format");
+        try   { return string.Format(template, m, s.ToString("D2")); }
+        catch { return $"{m}:{s:D2}"; }
     }
 
     // ── Button callback ────────────────────────────────────────────────────────

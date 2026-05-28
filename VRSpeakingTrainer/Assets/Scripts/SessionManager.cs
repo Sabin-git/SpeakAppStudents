@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -37,6 +38,16 @@ public class SessionManager : MonoBehaviour
     [FormerlySerializedAs("exitConfirmPanel")]
     [SerializeField] private GameObject _pauseMenuPanel;
 
+    [Header("Pause Menu Labels (optional — wire to localize strings)")]
+    [Tooltip("Pause menu title (e.g. 'Paused')")]
+    [SerializeField] private TextMeshProUGUI _pauseTitleLabel;
+    [Tooltip("Finish Presentation button label")]
+    [SerializeField] private TextMeshProUGUI _pauseFinishLabel;
+    [Tooltip("Exit (without saving) button label")]
+    [SerializeField] private TextMeshProUGUI _pauseExitLabel;
+    [Tooltip("Resume Session button label")]
+    [SerializeField] private TextMeshProUGUI _pauseResumeLabel;
+
     [Header("XR")]
     [SerializeField] private XRLifecycleManager _xrLifecycleManager;
 
@@ -62,7 +73,23 @@ public class SessionManager : MonoBehaviour
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Session")
             return;
 
+        ApplyPauseMenuLabels();
         StartSession();
+    }
+
+    // Pulls localized text into the pause menu labels. Safe to call before
+    // Localization.Load completes — Localization.Get falls back to the key.
+    // MainMenu kicks the load off, but if the user jumped straight into the
+    // Session scene (Editor Play Mode shortcut) we trigger it ourselves.
+    private void ApplyPauseMenuLabels()
+    {
+        if (!Localization.IsLoaded)
+            Localization.Load(this);
+
+        if (_pauseTitleLabel   != null) _pauseTitleLabel.text   = Localization.Get("pause_title");
+        if (_pauseFinishLabel  != null) _pauseFinishLabel.text  = Localization.Get("pause_finish");
+        if (_pauseExitLabel    != null) _pauseExitLabel.text    = Localization.Get("pause_exit");
+        if (_pauseResumeLabel  != null) _pauseResumeLabel.text  = Localization.Get("pause_resume");
     }
 
     private void Update()

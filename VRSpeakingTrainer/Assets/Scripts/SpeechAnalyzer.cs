@@ -27,10 +27,27 @@ public class SpeechAnalyzer : MonoBehaviour
     [Tooltip("EMA smoothing factor for WPM display (0=no change, 1=instant). 0.4–0.6 recommended.")]
     [SerializeField] [Range(0f, 1f)] private float wpmSmoothing = 0.5f;
 
-    private static readonly string[] FillerWords =
+    // English filler set. Listed longer-multi-word entries first so the
+    // CountFillers loop matches them before single-token substrings (CountFillers
+    // iterates left-to-right, but ordering still helps human readers).
+    private static readonly string[] FillerWordsEn =
     {
         "you know", "um", "uh", "like", "basically", "literally", "so", "right"
     };
+
+    // Dutch filler set — locked by the user-testing plan (see Task 1 decisions).
+    // Multi-word entries ("zeg maar", "soort van") are matched as substrings
+    // by CountFillers with word-boundary checks on each side.
+    private static readonly string[] FillerWordsNl =
+    {
+        "zeg maar", "soort van", "weet je", "eigenlijk",
+        "ehm", "uhm", "ofzo", "dus", "nou", "eh"
+    };
+
+    // Selected at session start from the Language PlayerPref. Reused for both
+    // the live-rolling-window filler count and the end-of-session recount.
+    // Never re-read mid-session.
+    private string[] _fillerWords = FillerWordsEn;
 
     // Each entry: (Time.time when transcript arrived, word count in that transcript)
     private readonly List<(float t, int words)> _wordLog    = new();
@@ -73,6 +90,13 @@ public class SpeechAnalyzer : MonoBehaviour
         _lastTranscriptTime = Time.time;
         _emitTimer          = 0f;
         _smoothedWpm        = 0f;
+
+        // Language pref read once per session. Picks the filler list used
+        // for both the rolling 30s count (live audience rules) and the
+        // full-transcript recount at session end.
+        string lang = PlayerPrefs.GetString("Language", Localization.LangEnglish);
+        _fillerWords = lang == Localization.LangDutch ? FillerWordsNl : FillerWordsEn;
+
         _isRunning          = true;
     }
 
@@ -187,18 +211,20 @@ public class SpeechAnalyzer : MonoBehaviour
             StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
-    private static int CountFillers(string text)
+    // Instance method — uses the per-session _fillerWords array picked in
+    // HandleSessionStart based on the Language PlayerPref. Word-boundary
+    // checks on each side prevent "so" matching inside "also", etc.
+    private int CountFillers(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return 0;
         string lower = text.ToLowerInvariant();
+        string[] fillers = _fillerWords ?? FillerWordsEn;
         int count = 0;
-        // Check multi-word fillers first to avoid double-counting substrings
-        foreach (string filler in FillerWords)
+        foreach (string filler in fillers)
         {
             int idx = 0;
             while ((idx = lower.IndexOf(filler, idx, StringComparison.Ordinal)) >= 0)
             {
-                // Simple word-boundary check: char before and after must not be a letter
                 bool startOk = idx == 0 || !char.IsLetter(lower[idx - 1]);
                 bool endOk   = idx + filler.Length == lower.Length
                                || !char.IsLetter(lower[idx + filler.Length]);

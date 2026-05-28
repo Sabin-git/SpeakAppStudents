@@ -63,6 +63,16 @@ public class MainMenuController : MonoBehaviour
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
+    private void Awake()
+    {
+        // Kick off the localization JSON load once per app launch. Reads the
+        // Language PlayerPref (defaults to "en"). Subsequent scenes call
+        // Localization.Get() synchronously — they get the key as a fallback
+        // until the JSON finishes loading, which is typically within a few
+        // frames on Android.
+        Localization.Load(this);
+    }
+
     private void Start()
     {
         // Duration slider
@@ -82,7 +92,7 @@ public class MainMenuController : MonoBehaviour
     private void UpdateLabel(float minutes)
     {
         if (durationLabel != null)
-            durationLabel.text = $"{(int)minutes} min";
+            durationLabel.text = (int)minutes + Localization.Get("menu_minutes_suffix");
     }
 
     // ── Restore dev panel state from PlayerPrefs ───────────────────────────────
@@ -226,7 +236,7 @@ public class MainMenuController : MonoBehaviour
     private void UpdateMockIntervalLabel(float value)
     {
         if (devMockIntervalLabel != null)
-            devMockIntervalLabel.text = $"{value:F1} s";
+            devMockIntervalLabel.text = value.ToString("F1") + Localization.Get("menu_seconds_suffix");
     }
 
     // ── Dev panel — audience callbacks ─────────────────────────────────────────

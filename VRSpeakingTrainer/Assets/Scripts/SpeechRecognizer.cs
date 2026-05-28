@@ -32,11 +32,17 @@ public class SpeechRecognizer : MonoBehaviour
     // Mock phrases cycle through in order, covering a range of speech patterns.
     //
     // Word count per phrase is calibrated to the default mockInterval of 4 seconds.
-    // Steady-state WPM ≈ (words / 4s) × 60. Target ranges:
+    // Steady-state WPM ≈ (words / 4s) × 60. Target ranges (English thresholds):
     //   Engaged  (110–160 WPM) → 7–11 words per phrase
     //   Distracted high (>180) → 13+ words per phrase
     //   Distracted low  (<80)  → ≤5  words per phrase
     //   Restless (fillers ≥ 4) → any length, 4+ filler words
+    //
+    // Dutch thresholds are slightly looser (Engaged 90–140, low <70, high >160)
+    // so MockPhrasesDutch is calibrated to those targets — each Dutch phrase
+    // matches the word count of its English counterpart so the same audience
+    // state sequence (Engaged → fast-Distracted → Restless-fillers → slow-Distracted → Recovery)
+    // fires at the same indices.
     private static readonly string[] MockPhrases =
     {
         // ── Engaged zone (7–11 words) ──────────────────────────────────────────
@@ -95,6 +101,71 @@ public class SpeechRecognizer : MonoBehaviour
         "I am happy to answer any questions you may have.",                // 9
     };
 
+    // Dutch parallel set. Word counts mirror MockPhrases entry-for-entry so
+    // every index in this array produces the same audience-state behaviour
+    // as the corresponding English index (subject to Dutch WPM thresholds:
+    // Engaged 90–140, low <70, high >160).
+    //
+    // Filler-heavy phrases use the Dutch filler set from SpeechAnalyzer:
+    // eh, ehm, uhm, eigenlijk, zeg maar, weet je, ofzo, dus, nou, soort van.
+    private static readonly string[] MockPhrasesDutch =
+    {
+        // ── Engaged zone (7–11 words) ──────────────────────────────────────────
+        // ~105–165 WPM at 4s interval → Engaged band 90–140 reached after a few phrases
+
+        "Goedemorgen, ik presenteer vandaag de belangrijkste bevindingen van ons.",                // 9
+        "Het onderzoek omvatte tweehonderd deelnemers van drie verschillende universiteiten.",     // 9
+        "Ons doel was virtuele leeromgevingen aanzienlijk te verbeteren.",                          // 8
+        "De resultaten tonen een duidelijke verbetering in de groep.",                              // 9
+        "De methode gebruikte een gerandomiseerd opzet met een controlegroep.",                     // 9
+        "Beide groepen voltooiden de voor- en nametingen volgens protocol.",                        // 9
+        "Het bewijs ondersteunt sterk onze oorspronkelijke hypothese hierover.",                    // 8
+        "Deze bevindingen hebben duidelijke gevolgen voor beroepsmatige training.",                 // 8
+        "Laat me jullie meenemen door elk van de belangrijkste bevindingen.",                       // 10
+        "De data spreekt voor zich en deze cijfers zijn overtuigend.",                              // 10
+        "Wij concluderen dat immersieve training de retentie aanzienlijk verbetert.",               // 9
+        "Bedankt voor jullie aandacht en zorgvuldige overweging vandaag.",                          // 8 (matches EN tokens)
+
+        // ── Fast speech (14–18 words) ──────────────────────────────────────────
+        // ~210–270 WPM → Distracted high (>160 sustained 20s) reached within ~20s
+
+        "Het tweede punt is heel belangrijk en we moeten dit snel behandelen voordat de volgende dia verschijnt.",          // 17
+        "Ik probeer zoveel mogelijk inhoud te behandelen omdat er nog ontzettend veel te bespreken is in deze beperkte tijd.",  // 19
+
+        // ── Filler-heavy (triggers Restless via fillerCount ≥ 4 in 30s) ────────
+        // Dutch fillers used here: eh, ehm, uhm, eigenlijk, zeg maar, weet je, ofzo, dus, nou, soort van
+
+        "Dus eh eigenlijk waren de uhm resultaten zeg maar weet je interessant.",          // dus, eh, eigenlijk, uhm, zeg maar, weet je = 6 fillers
+        "Ehm dus eigenlijk wat we vonden was ofzo zeg maar weet je patronen.",             // ehm, dus, eigenlijk, ofzo, zeg maar, weet je = 6 fillers
+        "Nou dus eh eigenlijk ehm de conclusie is zeg maar soort van onduidelijk.",        // nou, dus, eh, eigenlijk, ehm, zeg maar, soort van = 7 fillers
+        "Ehm zeg maar eigenlijk dus weet je uhm nou dit is complex.",                       // ehm, zeg maar, eigenlijk, dus, weet je, uhm, nou = 7 fillers
+
+        // ── Mixed fillers + content (2–3 fillers → borderline Distracted) ──────
+
+        "De bevinding toont ehm dat deelnemers zeg maar beter presteerden.",               // ehm, zeg maar = 2 fillers, 10 tokens
+        "Dus eigenlijk moeten we weet je deze training opnieuw bekijken.",                 // dus, eigenlijk, weet je = 3 fillers, 10 tokens
+
+        // ── Slow speech (≤5 words) ─────────────────────────────────────────────
+        // ~45–75 WPM → Distracted low (<70 sustained)
+
+        "De resultaten waren interessant.",        // 4 words → ~60 WPM
+        "Wij vonden leerverbetering aantoonbaar.", // 4 words → ~60 WPM
+        "Data toont duidelijke trends.",           // 4 words → ~60 WPM
+        "Conclusies blijven voorlopig.",           // 3 words → ~45 WPM
+
+        // ── Short phrases (gap between them tests pause detection) ────────────
+
+        "Volgend punt.",    // 2 words
+        "Verder gaan.",     // 2 words
+
+        // ── Recovery — back to Engaged after bad stretch ──────────────────────
+
+        "Terugkomend op het hoofdargument, het bewijs is heel duidelijk.",                  // 9
+        "Concluderend opent dit onderzoek nieuwe wegen voor verder onderzoek.",             // 9
+        "De praktische toepassingen van dit werk zijn aanzienlijk.",                        // 8
+        "Ik beantwoord graag de vragen die jullie misschien hebben.",                       // 9
+    };
+
     private const string ConfigFile  = "config.json";
     private const string ApiEndpoint = "https://speech.googleapis.com/v1/speech:recognize?key=";
 
@@ -109,6 +180,13 @@ public class SpeechRecognizer : MonoBehaviour
     private bool  _mockRunning;
     private float _mockTimer;
     private int   _mockPhraseIndex;
+
+    // Language selection — read once at session start from the Language PlayerPref
+    // (driven by Localization). Determines both the STT languageCode sent to
+    // Google and which mock phrase array is used in mock mode.
+    private string   _sessionLanguage = Localization.LangEnglish;
+    private string[] _sessionMockPhrases = MockPhrases;
+    private string   _sessionLanguageCode = "en-US";
 
     private void Start()
     {
@@ -164,12 +242,19 @@ public class SpeechRecognizer : MonoBehaviour
 
     private void OnSessionStart()
     {
+        // Language pref is read ONCE per session here — never per-frame. Used
+        // both to choose the mock phrase array and to pick the languageCode
+        // sent to Google STT in SendChunk.
+        _sessionLanguage     = PlayerPrefs.GetString("Language", Localization.LangEnglish);
+        _sessionMockPhrases  = _sessionLanguage == Localization.LangDutch ? MockPhrasesDutch : MockPhrases;
+        _sessionLanguageCode = _sessionLanguage == Localization.LangDutch ? "nl-NL" : "en-US";
+
         if (mockMode)
         {
             _mockPhraseIndex = 0;
             _mockTimer       = 0f;
             _mockRunning     = true;
-            Debug.Log("[SpeechRecognizer] Mock capture started.");
+            Debug.Log($"[SpeechRecognizer] Mock capture started ({_sessionLanguage}).");
             return;
         }
 
@@ -237,7 +322,8 @@ public class SpeechRecognizer : MonoBehaviour
         if (_mockTimer < mockInterval) return;
 
         _mockTimer = 0f;
-        string phrase = MockPhrases[_mockPhraseIndex % MockPhrases.Length];
+        string[] phrases = _sessionMockPhrases ?? MockPhrases;
+        string phrase = phrases[_mockPhraseIndex % phrases.Length];
         _mockPhraseIndex++;
 
         if (mockMuted) return;
@@ -290,10 +376,11 @@ public class SpeechRecognizer : MonoBehaviour
             pcm[i * 2 + 1] = (byte)((s >> 8) & 0xFF);
         }
 
+        string langCode = string.IsNullOrEmpty(_sessionLanguageCode) ? "en-US" : _sessionLanguageCode;
         string body =
             $"{{\"config\":{{\"encoding\":\"LINEAR16\"," +
             $"\"sampleRateHertz\":{sampleRate}," +
-            $"\"languageCode\":\"en-US\"," +
+            $"\"languageCode\":\"{langCode}\"," +
             $"\"model\":\"latest_long\"}}," +
             $"\"audio\":{{\"content\":\"{Convert.ToBase64String(pcm)}\"}}}}";
 
