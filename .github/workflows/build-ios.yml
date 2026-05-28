@@ -1,0 +1,78 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'VRSpeakingTrainer/**'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build for iOS
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # Caches the Unity Library folder between runs — saves ~10 min on repeat builds
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: VRSpeakingTrainer/Library
+          key: Library-iOS-${{ hashFiles('VRSpeakingTrainer/Assets/**', 'VRSpeakingTrainer/Packages/**', 'VRSpeakingTrainer/ProjectSettings/**') }}
+          restore-keys: Library-iOS-
+
+      # Writes the gitignored config.json from a GitHub secret before Unity sees the project
+      - name: Inject Google Cloud config
+        run: echo '${{ secrets.GOOGLE_CLOUD_CONFIG }}' > VRSpeakingTrainer/Assets/StreamingAssets/config.json
+
+      # Builds the Unity project and exports an Xcode project to build/iOS/
+      - name: Build Unity project (iOS)
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: VRSpeakingTrainer
+          targetPlatform: iOS
+          unityVersion: 6000.4.1f1
+          buildsPath: build
+
+      # Cardboard SDK delivers its iOS framework via CocoaPods — must run before xcodebuild
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods --no-document
+
+      - name: Find Xcode project directory
+        id: xcode
+        run: |
+          DIR=$(find build -name "Unity-iPhone.xcodeproj" -maxdepth 5 | head -1 | xargs dirname)
+          echo "dir=$DIR" >> $GITHUB_OUTPUT
+
+      - name: pod install
+        run: pod install
+        working-directory: ${{ steps.xcode.outputs.dir }}
+
+      # Builds an unsigned archive — good for verifying the full pipeline works.
+      # To produce a signed IPA for distribution, see the README for signing secrets.
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -workspace Unity-iPhone.xcworkspace \
+            -scheme Unity-iPhone \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/VRSpeakingTrainer.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO
+        working-directory: ${{ steps.xcode.outputs.dir }}
+
+      - name: Upload xcarchive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VRSpeakingTrainer-iOS
+          path: ${{ runner.temp }}/VRSpeakingTrainer.xcarchive
+          retention-days: 14

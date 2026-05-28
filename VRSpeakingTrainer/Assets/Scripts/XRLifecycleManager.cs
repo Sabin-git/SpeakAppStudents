@@ -81,8 +81,13 @@ public class XRLifecycleManager : MonoBehaviour
 
         if (manager.activeLoader == null)
         {
+#if UNITY_IOS
+            Debug.LogError("[XRLifecycleManager] XR loader failed to initialise. " +
+                           "Check XR Plugin Management -> iOS -> Cardboard is enabled.");
+#else
             Debug.LogError("[XRLifecycleManager] XR loader failed to initialise. " +
                            "Check XR Plugin Management -> Android -> Cardboard is enabled.");
+#endif
             IsTransitioning = false;
             _startRoutine = null;
             yield break;
