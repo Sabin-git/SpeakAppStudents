@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -6,6 +7,12 @@ using TMPro;
 /// <summary>
 /// Handles MainMenu UI: duration slider, Start button, placeholder panels (PPTX, Settings),
 /// and the Developer overlay panel with all debug/dev controls.
+///
+/// Also owns the first-launch CONSENT flow (Task 2): on Start, if
+/// PlayerPrefs Consent_Granted != 1, the main menu interactive UI is hidden
+/// behind the consent screen until the user taps "I consent". This avoids
+/// adding a separate MonoBehaviour just for two screens of consent UI and
+/// keeps us under the project script cap.
 ///
 /// All dev settings are persisted to PlayerPrefs so Session-scene scripts read them
 /// without requiring scene-crossing references.
@@ -19,6 +26,7 @@ using TMPro;
 ///   Dev_ForceAudienceState  — -1 = rule engine runs; 0-3 = lock to AudienceState
 ///   Dev_StartingAudienceState — initial AudienceState at session start (0=Engaged)
 ///   Dev_ForceGazeZone       — -1 = real tracking; 0=Audience, 1=Lectern, 2=Other
+///   Consent_Granted         — 0/1 first-launch consent; gate for reaching the menu
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
@@ -26,10 +34,42 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Slider          durationSlider;
     [SerializeField] private TextMeshProUGUI durationLabel;
 
+    [Header("Main Menu localized labels (optional)")]
+    [Tooltip("Main title TMP — refreshed when language changes from Settings.")]
+    [SerializeField] private TextMeshProUGUI menuTitleLabel;
+    [SerializeField] private TextMeshProUGUI startButtonLabel;
+    [SerializeField] private TextMeshProUGUI settingsButtonLabel;
+    [SerializeField] private TextMeshProUGUI developerButtonLabel;
+    [SerializeField] private TextMeshProUGUI pptxButtonLabel;
+    [SerializeField] private TextMeshProUGUI durationSectionLabel;
+
+    [Header("Main menu interactive roots (hidden when consent is pending)")]
+    [Tooltip("Group GameObjects containing the Start/Settings/Developer/PPTX buttons + duration slider + headers. All are SetActive(false) when consent is pending and SetActive(true) once consent is granted. Drag HeaderGroup, StartSessionGroup, OtherButtonsGroup here.")]
+    [SerializeField] private GameObject[] mainMenuInteractiveRoots;
+
     [Header("Panels")]
     [SerializeField] private GameObject devPanelRoot;
     [SerializeField] private GameObject settingsPanelRoot;
     [SerializeField] private GameObject pptxPanelRoot;
+
+    [Header("Settings controller (Task 2)")]
+    [SerializeField] private SettingsMenuController settingsMenu;
+
+    [Header("Consent screen (Task 2 — first launch gate)")]
+    [SerializeField] private GameObject       consentPanelRoot;
+    [SerializeField] private TextMeshProUGUI  consentTitleLabel;
+    [SerializeField] private TextMeshProUGUI  consentBodyLabel;
+    [SerializeField] private Button           consentAcceptButton;
+    [SerializeField] private TextMeshProUGUI  consentAcceptLabel;
+    [SerializeField] private Button           consentDeclineButton;
+    [SerializeField] private TextMeshProUGUI  consentDeclineLabel;
+
+    [Header("Consent declined sub-screen")]
+    [SerializeField] private GameObject       consentBlockedPanelRoot;
+    [SerializeField] private TextMeshProUGUI  consentBlockedTitleLabel;
+    [SerializeField] private TextMeshProUGUI  consentBlockedBodyLabel;
+    [SerializeField] private Button           consentRetryButton;
+    [SerializeField] private TextMeshProUGUI  consentRetryLabel;
 
     [Header("Dev Panel — Session")]
     [SerializeField] private Toggle         devDebugToggle;
@@ -87,12 +127,37 @@ public class MainMenuController : MonoBehaviour
         }
 
         RestoreDevSettings();
+
+        // Hand the Settings controller a reference to us so it can call back
+        // into the consent flow ("Review consent" button) and ask us to
+        // refresh our own labels after a language change.
+        if (settingsMenu != null) settingsMenu.SetMainMenu(this);
+
+        WireConsentButtons();
+        // Wait for the Localization JSON to finish loading before populating
+        // labels — otherwise Get() returns the raw key (e.g. "menu_title") as
+        // the documented missing-key fallback, which then shows on screen for
+        // the first frame and looks broken to the user.
+        StartCoroutine(RefreshLocalizedTextWhenLoaded());
+
+        // First-launch consent gate: block access to the menu UI until we have
+        // a valid Consent_Granted == 1 in PlayerPrefs. Pass `firstLaunch=true`
+        // so we know not to allow a "back to menu" affordance here.
+        if (PlayerPrefs.GetInt("Consent_Granted", 0) == 1)
+        {
+            HideConsentScreen();
+        }
+        else
+        {
+            ShowConsentScreen(reviewingFromSettings: false);
+        }
     }
 
     private void UpdateLabel(float minutes)
     {
+        // Main menu stays English — hardcoded " min" suffix.
         if (durationLabel != null)
-            durationLabel.text = (int)minutes + Localization.Get("menu_minutes_suffix");
+            durationLabel.text = (int)minutes + " min";
     }
 
     // ── Restore dev panel state from PlayerPrefs ───────────────────────────────
@@ -193,11 +258,27 @@ public class MainMenuController : MonoBehaviour
     // ── Panel open / close ─────────────────────────────────────────────────────
 
     public void OnDeveloperPressed()  => SetPanel(devPanelRoot,      true);
-    public void OnSettingsPressed()   => SetPanel(settingsPanelRoot, true);
     public void OnPPTXPressed()       => SetPanel(pptxPanelRoot,     true);
 
+    /// <summary>
+    /// Settings button on MainMenu. Delegates to SettingsMenuController so
+    /// the controller can refresh its own state from PlayerPrefs first.
+    /// Falls back to a raw panel toggle if the controller isn't wired.
+    /// </summary>
+    public void OnSettingsPressed()
+    {
+        if (settingsMenu != null) settingsMenu.OpenSettingsPanel();
+        else                      SetPanel(settingsPanelRoot, true);
+    }
+
     public void OnCloseDevPanel()  { SaveDevSettings(); SetPanel(devPanelRoot,      false); }
-    public void OnCloseSettings()  => SetPanel(settingsPanelRoot, false);
+
+    public void OnCloseSettings()
+    {
+        if (settingsMenu != null) settingsMenu.CloseSettingsPanel();
+        else                      SetPanel(settingsPanelRoot, false);
+    }
+
     public void OnClosePPTX()      => SetPanel(pptxPanelRoot,     false);
 
     private static void SetPanel(GameObject panel, bool active)
@@ -235,8 +316,9 @@ public class MainMenuController : MonoBehaviour
 
     private void UpdateMockIntervalLabel(float value)
     {
+        // Dev panel is researcher-facing, stays English — hardcoded " s" suffix.
         if (devMockIntervalLabel != null)
-            devMockIntervalLabel.text = value.ToString("F1") + Localization.Get("menu_seconds_suffix");
+            devMockIntervalLabel.text = value.ToString("F1") + " s";
     }
 
     // ── Dev panel — audience callbacks ─────────────────────────────────────────
@@ -278,5 +360,125 @@ public class MainMenuController : MonoBehaviour
         if (devGazeButtons == null) return;
         foreach (var btn in devGazeButtons)
             if (btn != null) btn.interactable = interactable;
+    }
+
+    // ── Consent screen (Task 2 — first-launch gate) ───────────────────────────
+    //
+    // The consent flow is intentionally folded into MainMenuController instead
+    // of a separate ConsentScreenController to stay under the project's 12+
+    // MonoBehaviour cap (we added SettingsMenuController; folding consent here
+    // brings the runtime total to 13 instead of 14). Consent is structurally
+    // tied to MainMenu visibility, so co-locating it is also clean.
+
+    private void WireConsentButtons()
+    {
+        if (consentAcceptButton != null)
+        {
+            consentAcceptButton.onClick.RemoveAllListeners();
+            consentAcceptButton.onClick.AddListener(OnConsentAccepted);
+        }
+        if (consentDeclineButton != null)
+        {
+            consentDeclineButton.onClick.RemoveAllListeners();
+            consentDeclineButton.onClick.AddListener(OnConsentDeclined);
+        }
+        if (consentRetryButton != null)
+        {
+            consentRetryButton.onClick.RemoveAllListeners();
+            consentRetryButton.onClick.AddListener(OnConsentRetry);
+        }
+    }
+
+    /// <summary>
+    /// Show the consent screen. Hides the main menu interactive root and any
+    /// open sub-panels. If reviewingFromSettings is true, the user came from
+    /// the Settings "Review consent" button (they already have consent saved);
+    /// otherwise this is a first-launch gate.
+    /// </summary>
+    public void ShowConsentScreen(bool reviewingFromSettings)
+    {
+        // Hide everything else first.
+        SetInteractiveRootsActive(false);
+        if (devPanelRoot            != null) devPanelRoot.SetActive(false);
+        if (settingsPanelRoot       != null) settingsPanelRoot.SetActive(false);
+        if (pptxPanelRoot           != null) pptxPanelRoot.SetActive(false);
+        if (consentBlockedPanelRoot != null) consentBlockedPanelRoot.SetActive(false);
+
+        if (consentPanelRoot != null) consentPanelRoot.SetActive(true);
+    }
+
+    private void HideConsentScreen()
+    {
+        if (consentPanelRoot        != null) consentPanelRoot.SetActive(false);
+        if (consentBlockedPanelRoot != null) consentBlockedPanelRoot.SetActive(false);
+        SetInteractiveRootsActive(true);
+    }
+
+    private void SetInteractiveRootsActive(bool active)
+    {
+        if (mainMenuInteractiveRoots == null) return;
+        foreach (var root in mainMenuInteractiveRoots)
+            if (root != null) root.SetActive(active);
+    }
+
+    private void OnConsentAccepted()
+    {
+        PlayerPrefs.SetInt("Consent_Granted", 1);
+        PlayerPrefs.Save();
+        HideConsentScreen();
+        if (settingsMenu != null) settingsMenu.RefreshPrivacyStatus();
+    }
+
+    private void OnConsentDeclined()
+    {
+        PlayerPrefs.SetInt("Consent_Granted", 0);
+        PlayerPrefs.Save();
+        if (consentPanelRoot        != null) consentPanelRoot.SetActive(false);
+        if (consentBlockedPanelRoot != null) consentBlockedPanelRoot.SetActive(true);
+        if (settingsMenu != null) settingsMenu.RefreshPrivacyStatus();
+    }
+
+    private void OnConsentRetry()
+    {
+        // Bounce the user back to the consent prompt so they can flip their
+        // choice. Do NOT quit the app — leaving them stranded in "blocked" is
+        // bad UX and the user-testing plan calls out "let them change their
+        // mind".
+        if (consentBlockedPanelRoot != null) consentBlockedPanelRoot.SetActive(false);
+        if (consentPanelRoot        != null) consentPanelRoot.SetActive(true);
+    }
+
+    // ── Localized text refresh (called from SettingsMenuController after a
+    //    language change so the main menu doesn't look stale). ───────────────
+
+    // Polls Localization.IsLoaded once per frame, then runs RefreshLocalizedText.
+    // Used at Start to avoid the empty-dictionary fallback (showing raw keys).
+    private IEnumerator RefreshLocalizedTextWhenLoaded()
+    {
+        while (!Localization.IsLoaded) yield return null;
+        RefreshLocalizedText();
+    }
+
+    public void RefreshLocalizedText()
+    {
+        // Main menu labels are intentionally NOT localized — they're the
+        // researcher-facing entry point and stay English regardless of the
+        // participant's chosen Language. Whatever the TMP text says in the
+        // Editor (e.g. "VR Speaking Trainer", "Practice", "Settings", etc.)
+        // is what the user sees at runtime.
+        // The SerializeField slots below are kept for backward compatibility
+        // with existing scene wiring but are no longer driven from Localization.
+
+        // Consent screen text
+        if (consentTitleLabel        != null) consentTitleLabel.text        = Localization.Get("consent_title");
+        if (consentBodyLabel         != null) consentBodyLabel.text         = Localization.Get("consent_body");
+        if (consentAcceptLabel       != null) consentAcceptLabel.text       = Localization.Get("consent_accept");
+        if (consentDeclineLabel      != null) consentDeclineLabel.text      = Localization.Get("consent_decline");
+        if (consentBlockedTitleLabel != null) consentBlockedTitleLabel.text = Localization.Get("consent_blocked_title");
+        if (consentBlockedBodyLabel  != null) consentBlockedBodyLabel.text  = Localization.Get("consent_blocked_body");
+        if (consentRetryLabel        != null) consentRetryLabel.text        = Localization.Get("consent_retry");
+
+        // Update the duration suffix label too.
+        if (durationSlider != null) UpdateLabel(durationSlider.value);
     }
 }

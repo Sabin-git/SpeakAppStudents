@@ -57,5 +57,33 @@
   "results_caption_good": "Good Job!",
   "results_caption_keep": "Keep Practicing!",
   "results_caption_needs": "Needs Work",
-  "results_caption_try": "Try Again"
+  "results_caption_try": "Try Again",
+
+  "settings_title": "Settings",
+  "settings_back": "Back",
+  "settings_section_language": "Language",
+  "settings_lang_english": "English",
+  "settings_lang_dutch": "Nederlands",
+  "settings_section_privacy": "Privacy & Data",
+  "settings_privacy_status_label": "Audio sent to Google Cloud STT",
+  "settings_privacy_status_format": "Audio sent to Google Cloud STT: {0}",
+  "settings_privacy_status_yes": "Yes",
+  "settings_privacy_status_no": "No",
+  "settings_privacy_review_consent": "Review consent",
+  "settings_privacy_policy_button": "Privacy policy",
+  "settings_section_comfort": "VR Comfort",
+  "settings_comfort_brightness": "Brightness",
+  "settings_comfort_vignetting": "Vignetting (head motion)",
+
+  "consent_title": "Consent Required",
+  "consent_body": "This study records your voice through the microphone and sends short audio clips to Google Cloud Speech-to-Text to measure your speaking. By tapping I consent you agree to this processing for the duration of this session.",
+  "consent_accept": "I consent",
+  "consent_decline": "I do not consent",
+  "consent_blocked_title": "Consent required to proceed",
+  "consent_blocked_body": "The app cannot run without your consent to process speech audio. You can change your mind and try again.",
+  "consent_retry": "Retry",
+
+  "privacy_policy_title": "Privacy Policy",
+  "privacy_policy_body": "This research prototype records your voice while you practice public speaking. The microphone captures short audio clips that are sent over HTTPS to Google Cloud Speech-to-Text, which runs on servers in the United States, in order to produce a transcript. The transcript is used on-device to compute speaking metrics (words per minute, filler-word counts, pause length) and is shown to you on the Results screen. We collect: microphone audio, the resulting transcript, your head-orientation gaze times, and your chosen language. We do not collect your name, email address, location, contacts, or any other personal identifier. Audio clips are not stored after a session ends. Transcripts and metrics live only on this device and are deleted when you uninstall the app. You can withdraw consent at any time from the Settings menu, which will prevent any further audio from being sent. For questions or to request deletion of any session data still on this device, contact: [your-email@example.com]. By using this app you confirm you are at least 18 years old and are participating voluntarily.",
+  "privacy_policy_back": "Back"
 }

@@ -57,5 +57,33 @@
   "results_caption_good": "Goed gedaan!",
   "results_caption_keep": "Blijf oefenen!",
   "results_caption_needs": "Kan beter",
-  "results_caption_try": "Probeer opnieuw"
+  "results_caption_try": "Probeer opnieuw",
+
+  "settings_title": "Instellingen",
+  "settings_back": "Terug",
+  "settings_section_language": "Taal",
+  "settings_lang_english": "English",
+  "settings_lang_dutch": "Nederlands",
+  "settings_section_privacy": "Privacy en gegevens",
+  "settings_privacy_status_label": "Audio verzonden naar Google Cloud STT",
+  "settings_privacy_status_format": "Audio verzonden naar Google Cloud STT: {0}",
+  "settings_privacy_status_yes": "Ja",
+  "settings_privacy_status_no": "Nee",
+  "settings_privacy_review_consent": "Toestemming herzien",
+  "settings_privacy_policy_button": "Privacybeleid",
+  "settings_section_comfort": "VR-comfort",
+  "settings_comfort_brightness": "Helderheid",
+  "settings_comfort_vignetting": "Vignettering (bij hoofdbeweging)",
+
+  "consent_title": "Toestemming vereist",
+  "consent_body": "Dit onderzoek neemt je stem op via de microfoon en stuurt korte audiofragmenten naar Google Cloud Speech-to-Text om je spreken te meten. Door op Ik geef toestemming te tikken ga je akkoord met deze verwerking voor de duur van deze sessie.",
+  "consent_accept": "Ik geef toestemming",
+  "consent_decline": "Ik geef geen toestemming",
+  "consent_blocked_title": "Toestemming vereist om door te gaan",
+  "consent_blocked_body": "De app kan niet draaien zonder je toestemming om spraakaudio te verwerken. Je kunt van gedachten veranderen en het opnieuw proberen.",
+  "consent_retry": "Opnieuw proberen",
+
+  "privacy_policy_title": "Privacybeleid",
+  "privacy_policy_body": "Dit onderzoeksprototype neemt je stem op terwijl je oefent met spreken in het openbaar. De microfoon legt korte audiofragmenten vast die via HTTPS naar Google Cloud Speech-to-Text worden gestuurd, dat draait op servers in de Verenigde Staten, om er een transcript van te maken. Het transcript wordt op het apparaat gebruikt om spreekstatistieken te berekenen (woorden per minuut, aantal stopwoorden, pauzeduur) en wordt aan jou getoond op het Resultatenscherm. Wij verzamelen: microfoonaudio, het resulterende transcript, je hoofdorientatie-blikgegevens en de door jou gekozen taal. Wij verzamelen geen naam, e-mailadres, locatie, contacten of andere persoonlijke identificatoren. Audiofragmenten worden niet bewaard nadat een sessie is afgelopen. Transcripten en statistieken blijven uitsluitend op dit apparaat en worden verwijderd wanneer je de app verwijdert. Je kunt je toestemming op elk moment intrekken via het menu Instellingen, waardoor er geen audio meer wordt verzonden. Voor vragen of een verzoek tot verwijdering van eventueel achtergebleven sessiegegevens op dit apparaat: neem contact op via [jouw-email@voorbeeld.nl]. Door deze app te gebruiken bevestig je dat je minstens 18 jaar oud bent en vrijwillig deelneemt.",
+  "privacy_policy_back": "Terug"
 }

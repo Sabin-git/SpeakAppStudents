@@ -3,20 +3,33 @@ using UnityEngine;
 /// <summary>
 /// Per-avatar component. Attach to each AvatarAnchor GO (set avatarIndex 0–9).
 ///
-/// When AudienceController calls SetTargetState():
-///   30–70% of avatars switch immediately (randomised per instance).
-///   The rest delay up to 5 seconds before switching.
+/// Holds individual state and cycles through state-variant clips every 8–15
+/// seconds for natural per-avatar variation, so avatars don't look frozen on a
+/// single clip during long state periods. The cycle timer is randomised per
+/// avatar with a 0–8s initial offset so all 10 avatars don't swap on the same
+/// frame.
 ///
-/// Drives an Animator "State" int, "Variant" float, and "GazeReact" trigger.
-/// Each state has N clip variants in a Blend Tree; Variant picks one at random
-/// whenever the avatar enters that state, so avatars in the same state still
-/// look different from each other.
+/// On global state changes (AudienceController → SetTargetState), 30–70% of
+/// avatars switch immediately (randomised per instance); the rest delay over a
+/// randomised 0–8s window before switching, producing a natural staggered
+/// transition. Individual gaze reactions are fired via SetGazed().
 ///
-/// Restless plays the same base clip as Neutral but randomly fires
-/// DistractionReaction one-shots at 2–8 second intervals.
+/// DistractionReact one-shots have been removed (these were the source of the
+/// "fall through chair" bug — standing Mixamo reaction clips played on seated
+/// avatars caused the hips to snap up and clip through the chair seat).
+/// Restless now just plays its base clip (the same as Neutral, per the
+/// existing AnimatorClipWirer behaviour) and cycles variants like every other
+/// state. The DistractionReacting state in AudienceAnimator.controller remains
+/// as dead code; safe to leave or clean up later via the Animator window.
 ///
-/// _variantCounts and _distractionReactCount are populated automatically by
-/// AnimatorClipWirer (VR Trainer → Wire Animation Clips).
+/// Drives an Animator "State" int and "Variant" float. Each state has N clip
+/// variants in a Blend Tree; Variant picks one at random whenever the avatar
+/// enters a state OR cycles within a state. The blend tree handles the visual
+/// crossfade automatically. A "GazeReact" trigger is also fired for per-avatar
+/// gaze reactions.
+///
+/// _variantCounts is populated automatically by AnimatorClipWirer
+/// (VR Trainer → Wire Animation Clips).
 /// </summary>
 public class AudienceMember : MonoBehaviour
 {
@@ -30,6 +43,7 @@ public class AudienceMember : MonoBehaviour
     [Tooltip("How many DistractionReaction clips are available. " +
              "Set automatically by VR Trainer → Wire Animation Clips.")]
     [SerializeField] private int _distractionReactCount = 2;
+    // Kept for backward compatibility with AnimatorClipWirer; no longer drives runtime behaviour.
 
     private AudienceState _currentState = AudienceState.Neutral;
     private AudienceState _pendingState;
@@ -38,18 +52,24 @@ public class AudienceMember : MonoBehaviour
     private float         _switchTimer;
     private bool          _isGazed;
 
-    private float _reactTimer;
-    private float _nextReactDelay = 99f;
+    private float _variantCycleTimer;
+    private float _nextVariantCycleDelay;
 
     private Animator _anim;
 
-    private static readonly int AnimStateId          = Animator.StringToHash("State");
-    private static readonly int VariantId            = Animator.StringToHash("Variant");
-    private static readonly int GazeReactId          = Animator.StringToHash("GazeReact");
-    private static readonly int DistractionReactId   = Animator.StringToHash("DistractionReact");
-    private static readonly int DistractionVariantId = Animator.StringToHash("DistractionReactVariant");
+    private static readonly int AnimStateId = Animator.StringToHash("State");
+    private static readonly int VariantId   = Animator.StringToHash("Variant");
+    private static readonly int GazeReactId = Animator.StringToHash("GazeReact");
 
-    private void Awake() => _anim = GetComponentInChildren<Animator>();
+    private void Awake()
+    {
+        _anim = GetComponentInChildren<Animator>();
+
+        // Stagger first variant cycle across avatars so all 10 don't swap on the same frame.
+        _variantCycleTimer     = Random.Range(0f, 8f);
+        _nextVariantCycleDelay = Random.Range(8f, 15f);
+    }
+
     private void Start()  => ApplyState(_currentState);
 
     // ── State switching ────────────────────────────────────────────────────────
@@ -70,7 +90,7 @@ public class AudienceMember : MonoBehaviour
         else
         {
             _pendingState = state;
-            _switchDelay  = Random.Range(0f, 5f);
+            _switchDelay  = Random.Range(0f, 8f);
             _switchTimer  = 0f;
             _hasPending   = true;
         }
@@ -88,14 +108,10 @@ public class AudienceMember : MonoBehaviour
             }
         }
 
-        if (_currentState == AudienceState.Restless && _distractionReactCount > 0)
+        _variantCycleTimer += Time.deltaTime;
+        if (_variantCycleTimer >= _nextVariantCycleDelay)
         {
-            _reactTimer += Time.deltaTime;
-            if (_reactTimer >= _nextReactDelay)
-            {
-                FireDistractionReaction();
-                ScheduleNextReaction();
-            }
+            CycleVariant();
         }
     }
 
@@ -109,25 +125,21 @@ public class AudienceMember : MonoBehaviour
         _anim.SetFloat(VariantId, Random.Range(0, Mathf.Max(1, count)));
         _anim.SetInteger(AnimStateId, stateIdx);
 
-        if (state == AudienceState.Restless)
-            ScheduleNextReaction();
-
         Debug.Log($"[AudienceMember {avatarIndex}] → {state}");
     }
 
-    // ── Distraction reactions (Restless state) ─────────────────────────────────
+    // ── Per-avatar variant cycling ─────────────────────────────────────────────
 
-    private void ScheduleNextReaction()
+    private void CycleVariant()
     {
-        _reactTimer     = 0f;
-        _nextReactDelay = Random.Range(2f, 8f);
-    }
+        _variantCycleTimer     = 0f;
+        _nextVariantCycleDelay = Random.Range(8f, 15f);
 
-    private void FireDistractionReaction()
-    {
         if (_anim == null) return;
-        _anim.SetFloat(DistractionVariantId, Random.Range(0, Mathf.Max(1, _distractionReactCount)));
-        _anim.SetTrigger(DistractionReactId);
+
+        int stateIdx = (int)_currentState;
+        int count    = (stateIdx < _variantCounts.Length) ? _variantCounts[stateIdx] : 1;
+        _anim.SetFloat(VariantId, Random.Range(0, Mathf.Max(1, count)));
     }
 
     // ── Gaze reaction ──────────────────────────────────────────────────────────
