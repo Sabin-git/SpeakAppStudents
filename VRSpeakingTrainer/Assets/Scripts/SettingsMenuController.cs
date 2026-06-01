@@ -16,10 +16,13 @@ using TMPro;
 /// The developer panel is unrelated and is NOT touched by this controller.
 ///
 /// PlayerPrefs touched here:
-///   Language           — string ("en" | "nl"), default "en" (shared with Localization)
-///   Settings_Brightness— float 0..1,            default 1.0
-///   Settings_Vignetting— int 0/1,               default 0
-///   Consent_Granted    — int 0/1,               default 0 (READ here, WRITTEN by MainMenuController)
+///   Language               — string ("en" | "nl"), default "en" (shared with Localization)
+///   Settings_Brightness    — float 0..1,            default 1.0
+///   Settings_Vignetting    — int 0/1,               default 0
+///   Settings_Responsiveness— string ("easy"|"medium"|"hard"), default "medium"
+///                            Read at session start by AudienceRuleEngine, AudienceMember
+///                            (and Task 4 HeadTracker). Constant during a session.
+///   Consent_Granted        — int 0/1,               default 0 (READ here, WRITTEN by MainMenuController)
 ///
 /// Brightness is applied at runtime through a full-screen black overlay Image
 /// whose alpha = (1 - brightness). The overlay GameObject is wired in the
@@ -72,6 +75,18 @@ public class SettingsMenuController : MonoBehaviour
     [SerializeField] private Button          privacyPolicyBackButton;
     [SerializeField] private TextMeshProUGUI privacyPolicyBackLabel;
 
+    [Header("Audience section (Task 2d — responsiveness)")]
+    [SerializeField] private TextMeshProUGUI audienceSectionLabel;
+    [SerializeField] private TextMeshProUGUI responsivenessLabel;
+    [Tooltip("Three radio-style toggles in order: Easy(0), Medium(1), Hard(2). " +
+             "Place all three in the same ToggleGroup so they behave as a radio.")]
+    [SerializeField] private Toggle          easyToggle;
+    [SerializeField] private Toggle          mediumToggle;
+    [SerializeField] private Toggle          hardToggle;
+    [SerializeField] private TextMeshProUGUI easyToggleLabel;
+    [SerializeField] private TextMeshProUGUI mediumToggleLabel;
+    [SerializeField] private TextMeshProUGUI hardToggleLabel;
+
     [Header("VR comfort section")]
     [SerializeField] private TextMeshProUGUI comfortSectionLabel;
     [SerializeField] private TextMeshProUGUI brightnessLabel;
@@ -107,7 +122,11 @@ public class SettingsMenuController : MonoBehaviour
     private bool       _haveLastHeadRot;
     private float      _vignetteAlpha; // currently displayed alpha
 
-    private const float DefaultBrightness = 1f;
+    private const float  DefaultBrightness     = 1f;
+    private const string DefaultResponsiveness = "medium";
+    private const string ResponsivenessEasy    = "easy";
+    private const string ResponsivenessMedium  = "medium";
+    private const string ResponsivenessHard    = "hard";
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -235,6 +254,35 @@ public class SettingsMenuController : MonoBehaviour
             vignettingToggle.onValueChanged.RemoveAllListeners();
             vignettingToggle.onValueChanged.AddListener(OnVignettingToggled);
         }
+
+        // Audience responsiveness radio (Task 2d).
+        // Each toggle writes the matching string to Settings_Responsiveness on
+        // turn-on. The ToggleGroup component on the parent Row enforces mutual
+        // exclusion in Unity Editor wiring — see WIRING_TASK_2D.md.
+        if (easyToggle != null)
+        {
+            easyToggle.onValueChanged.RemoveAllListeners();
+            easyToggle.onValueChanged.AddListener(isOn =>
+            {
+                if (isOn) OnResponsivenessSelected(ResponsivenessEasy);
+            });
+        }
+        if (mediumToggle != null)
+        {
+            mediumToggle.onValueChanged.RemoveAllListeners();
+            mediumToggle.onValueChanged.AddListener(isOn =>
+            {
+                if (isOn) OnResponsivenessSelected(ResponsivenessMedium);
+            });
+        }
+        if (hardToggle != null)
+        {
+            hardToggle.onValueChanged.RemoveAllListeners();
+            hardToggle.onValueChanged.AddListener(isOn =>
+            {
+                if (isOn) OnResponsivenessSelected(ResponsivenessHard);
+            });
+        }
     }
 
     private void RefreshFromPlayerPrefs()
@@ -254,6 +302,15 @@ public class SettingsMenuController : MonoBehaviour
         bool vignettingOn = PlayerPrefs.GetInt("Settings_Vignetting", 0) == 1;
         if (vignettingToggle != null) vignettingToggle.SetIsOnWithoutNotify(vignettingOn);
         ApplyVignetteEnabled(vignettingOn);
+
+        // Audience responsiveness radio — restore the active toggle from the
+        // pref (default = medium). SetIsOnWithoutNotify so the listener doesn't
+        // fire a redundant write back to PlayerPrefs.
+        string responsiveness = NormalizeResponsiveness(
+            PlayerPrefs.GetString("Settings_Responsiveness", DefaultResponsiveness));
+        if (easyToggle   != null) easyToggle.SetIsOnWithoutNotify  (responsiveness == ResponsivenessEasy);
+        if (mediumToggle != null) mediumToggle.SetIsOnWithoutNotify(responsiveness == ResponsivenessMedium);
+        if (hardToggle   != null) hardToggle.SetIsOnWithoutNotify  (responsiveness == ResponsivenessHard);
     }
 
     private void RefreshLocalizedText()
@@ -277,6 +334,13 @@ public class SettingsMenuController : MonoBehaviour
         if (comfortSectionLabel      != null) comfortSectionLabel.text      = Localization.Get("settings_section_comfort");
         if (brightnessLabel          != null) brightnessLabel.text          = Localization.Get("settings_comfort_brightness");
         if (vignettingLabel          != null) vignettingLabel.text          = Localization.Get("settings_comfort_vignetting");
+
+        // Audience section (Task 2d)
+        if (audienceSectionLabel     != null) audienceSectionLabel.text     = Localization.Get("settings_section_audience");
+        if (responsivenessLabel      != null) responsivenessLabel.text      = Localization.Get("settings_responsiveness_label");
+        if (easyToggleLabel          != null) easyToggleLabel.text          = Localization.Get("settings_responsiveness_easy");
+        if (mediumToggleLabel        != null) mediumToggleLabel.text        = Localization.Get("settings_responsiveness_medium");
+        if (hardToggleLabel          != null) hardToggleLabel.text          = Localization.Get("settings_responsiveness_hard");
     }
 
     // ── Section: Language ─────────────────────────────────────────────────────
@@ -338,6 +402,23 @@ public class SettingsMenuController : MonoBehaviour
     private void ClosePrivacyPolicy()
     {
         if (privacyPolicyPanelRoot != null) privacyPolicyPanelRoot.SetActive(false);
+    }
+
+    // ── Section: Audience responsiveness (Task 2d) ────────────────────────────
+
+    /// <summary>
+    /// Persists the chosen responsiveness level. Picked up by AudienceRuleEngine,
+    /// AudienceMember (and, when Task 4 lands, HeadTracker) at the next session
+    /// start. The change does NOT apply to an already-running session — that's
+    /// intentional, since the rule thresholds and per-avatar stagger windows
+    /// are sampled once in HandleSessionStart / Awake respectively.
+    /// </summary>
+    private void OnResponsivenessSelected(string level)
+    {
+        string current = PlayerPrefs.GetString("Settings_Responsiveness", DefaultResponsiveness);
+        if (current == level) return;
+        PlayerPrefs.SetString("Settings_Responsiveness", level);
+        PlayerPrefs.Save();
     }
 
     // ── Section: VR comfort ───────────────────────────────────────────────────
@@ -436,5 +517,17 @@ public class SettingsMenuController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(raw)) return Localization.LangEnglish;
         return raw == Localization.LangDutch ? Localization.LangDutch : Localization.LangEnglish;
+    }
+
+    private static string NormalizeResponsiveness(string raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return DefaultResponsiveness;
+        switch (raw.ToLowerInvariant())
+        {
+            case ResponsivenessEasy:   return ResponsivenessEasy;
+            case ResponsivenessHard:   return ResponsivenessHard;
+            case ResponsivenessMedium: return ResponsivenessMedium;
+            default:                   return DefaultResponsiveness;
+        }
     }
 }

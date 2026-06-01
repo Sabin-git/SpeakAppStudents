@@ -25,6 +25,7 @@
   "dev_gaze_lectern": "Lectern",
   "dev_gaze_other": "Other",
   "dev_skip_results": "Skip to Results",
+  "dev_force_responsiveness": "Force responsiveness:",
   "dev_close": "Close",
 
   "hud_wpm_zero": "0 WPM",
@@ -46,6 +47,8 @@
   "results_fillers_format": "Fillers: {0}",
   "results_wpm_format": "Avg WPM: {0}",
   "results_session_format": "Session: {0}:{1}",
+  "results_heatmap_label": "Where you looked",
+  "results_heatmap_top3_format": "Most-looked-at avatars: {0}",
 
   "results_grade_a": "A",
   "results_grade_b": "B",
@@ -71,6 +74,11 @@
   "settings_privacy_status_no": "No",
   "settings_privacy_review_consent": "Review consent",
   "settings_privacy_policy_button": "Privacy policy",
+  "settings_section_audience": "Audience",
+  "settings_responsiveness_label": "Audience responsiveness",
+  "settings_responsiveness_easy": "Easy",
+  "settings_responsiveness_medium": "Medium",
+  "settings_responsiveness_hard": "Hard",
   "settings_section_comfort": "VR Comfort",
   "settings_comfort_brightness": "Brightness",
   "settings_comfort_vignetting": "Vignetting (head motion)",

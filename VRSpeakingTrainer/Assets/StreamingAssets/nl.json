@@ -25,6 +25,7 @@
   "dev_gaze_lectern": "Spreekgestoelte",
   "dev_gaze_other": "Overig",
   "dev_skip_results": "Naar resultaten",
+  "dev_force_responsiveness": "Gevoeligheid forceren:",
   "dev_close": "Sluiten",
 
   "hud_wpm_zero": "0 WPM",
@@ -46,6 +47,8 @@
   "results_fillers_format": "Stopwoorden: {0}",
   "results_wpm_format": "Gem. WPM: {0}",
   "results_session_format": "Sessie: {0}:{1}",
+  "results_heatmap_label": "Waar je keek",
+  "results_heatmap_top3_format": "Meest bekeken avatars: {0}",
 
   "results_grade_a": "A",
   "results_grade_b": "B",
@@ -71,6 +74,11 @@
   "settings_privacy_status_no": "Nee",
   "settings_privacy_review_consent": "Toestemming herzien",
   "settings_privacy_policy_button": "Privacybeleid",
+  "settings_section_audience": "Publiek",
+  "settings_responsiveness_label": "Publieksgevoeligheid",
+  "settings_responsiveness_easy": "Gemakkelijk",
+  "settings_responsiveness_medium": "Gemiddeld",
+  "settings_responsiveness_hard": "Moeilijk",
   "settings_section_comfort": "VR-comfort",
   "settings_comfort_brightness": "Helderheid",
   "settings_comfort_vignetting": "Vignettering (bij hoofdbeweging)",

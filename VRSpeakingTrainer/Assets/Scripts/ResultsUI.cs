@@ -11,18 +11,25 @@ using TMPro;
 /// chosen from hardcoded pools so the UI can be tested without a real session.
 ///
 /// Keys read (written by SessionManager + HeadTracker before scene transition):
-///   Results_AvgWPM          float
-///   Results_FillerCount     int
-///   Results_SessionTime     float  (seconds)
-///   Results_TimeOnAudience  float  (seconds)
-///   Results_TimeOnLectern   float  (seconds)
-///   Results_TimeOnOther     float  (seconds)
+///   Results_AvgWPM             float
+///   Results_FillerCount        int
+///   Results_SessionTime        float  (seconds)
+///   Results_TimeOnAudience     float  (seconds)
+///   Results_TimeOnLectern      float  (seconds)
+///   Results_TimeOnOther        float  (seconds)
+///   Results_TimeOnAvatar_0..9  float  (seconds — Task 4 heat map)
 ///
 /// Score breakdown (0-100 each):
 ///   Speech score  — WPM proximity to ideal 110-160 range
 ///   Filler score  — filler-word rate per minute
 ///   Gaze score    — fraction of tracked time spent on audience
 ///   Overall       — weighted average (35% speech, 25% filler, 40% gaze)
+///
+/// Task 4 — gaze heat map widget:
+///   A 2×5 grid of "seat" Images, one per avatar, coloured by Results_TimeOnAvatar_*.
+///   Below the grid: a single TMP line with the top-3 most-looked-at avatars.
+///   Wiring is optional; if gazeHeatMapRoot or gazeHeatSeats[0] is null, the
+///   widget is skipped silently (with one Debug.Log for dev visibility).
 /// </summary>
 public class ResultsUI : MonoBehaviour
 {
@@ -48,6 +55,17 @@ public class ResultsUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI wordsText;
     [SerializeField] private TextMeshProUGUI fillersText;
     [SerializeField] private TextMeshProUGUI wpmText;
+
+    [Header("Gaze Heat Map (Task 4 — optional; widget skipped if root is null)")]
+    [Tooltip("Container GameObject for the entire heat map widget; toggled off if " +
+             "the widget is not wired in the Editor.")]
+    [SerializeField] private GameObject gazeHeatMapRoot;
+    [Tooltip("10 seat Images, indexed by avatarIndex. Seat[i] must correspond to " +
+             "Desk_NN's avatarIndex == i so the 2×5 grid matches the audience layout.")]
+    [SerializeField] private Image[]  gazeHeatSeats = new Image[10];
+    [Tooltip("Top-3 most-looked-at avatars line. Format string lives in Localization key " +
+             "results_heatmap_top3_format (e.g. 'Most-looked-at avatars: {0}').")]
+    [SerializeField] private TextMeshProUGUI gazeHeatTop3;
 
     // ── Debug value pools ──────────────────────────────────────────────────────
     // Each pool covers a range of realistic values — good, average, and poor —
@@ -113,6 +131,7 @@ public class ResultsUI : MonoBehaviour
 
         PopulateUI(overall, speechScore, fillerScore, gazeScore, duration);
         PopulateRawMetrics(words, fillers, avgWpm);
+        PopulateGazeHeatMap();
     }
 
     private void PopulateRawMetrics(int words, int fillers, float avgWpm)
@@ -130,6 +149,142 @@ public class ResultsUI : MonoBehaviour
         if (string.IsNullOrEmpty(template)) return arg != null ? arg.ToString() : string.Empty;
         try   { return string.Format(template, arg); }
         catch { return $"{template} {arg}"; }
+    }
+
+    // ── Task 4 — gaze heat map ────────────────────────────────────────────────
+    // Reads the 10 Results_TimeOnAvatar_* prefs once and paints the 10 seat
+    // Images plus the top-3 text line. Skipped silently (with one log) when
+    // wiring is missing, so a half-wired Editor scene doesn't NRE.
+
+    private static readonly Color HeatColorZero    = Hex("#3A3A4E");
+    private static readonly Color HeatColorNeutral = Hex("#A8A8B8");
+    private static readonly Color HeatColorWarm    = Hex("#D89870");
+    private static readonly Color HeatColorHot     = Hex("#C9504C");
+
+    private void PopulateGazeHeatMap()
+    {
+        if (gazeHeatMapRoot == null || gazeHeatSeats == null || gazeHeatSeats.Length == 0
+            || gazeHeatSeats[0] == null)
+        {
+            // Wiring not present — keep the rest of the Results screen
+            // working and just log once so devs notice during play-testing.
+            Debug.Log("[ResultsUI] Gaze heat map not wired — skipping. " +
+                      "Wire gazeHeatMapRoot + gazeHeatSeats[10] + gazeHeatTop3 in the Inspector.");
+            if (gazeHeatMapRoot != null) gazeHeatMapRoot.SetActive(false);
+            return;
+        }
+
+        gazeHeatMapRoot.SetActive(true);
+
+        // Read the 10 per-avatar prefs once and compute the average over
+        // non-zero values. If every avatar is zero (no gaze data this session)
+        // every seat goes to the cool-gray colour and the top-3 line shows
+        // nothing — but the widget is still visible so the user knows it exists.
+        const int N = 10;
+        float[] times = new float[N];
+        float   sum   = 0f;
+        int     nonZeroCount = 0;
+        for (int i = 0; i < N; i++)
+        {
+            times[i] = PlayerPrefs.GetFloat($"Results_TimeOnAvatar_{i}", 0f);
+            if (times[i] > 0f) { sum += times[i]; nonZeroCount++; }
+        }
+        float avg = nonZeroCount > 0 ? sum / nonZeroCount : 0f;
+
+        // Top-3 indices by gaze time (descending). Simple O(N²) — N is 10.
+        // Used both to flag the top-1/top-2 seats for the "hot" red colour
+        // and to render the text line below the grid.
+        int[] topIndices = new int[3] { -1, -1, -1 };
+        bool[] taken = new bool[N];
+        for (int slot = 0; slot < 3; slot++)
+        {
+            int bestIdx   = -1;
+            float bestVal = 0f;
+            for (int i = 0; i < N; i++)
+            {
+                if (taken[i] || times[i] <= 0f) continue;
+                if (times[i] > bestVal) { bestVal = times[i]; bestIdx = i; }
+            }
+            if (bestIdx < 0) break;
+            topIndices[slot] = bestIdx;
+            taken[bestIdx] = true;
+        }
+
+        // Colour each seat. The bounds check on gazeHeatSeats stops the
+        // loop early if the user wired fewer than 10 seats (e.g. mistake).
+        int seatCount = Mathf.Min(N, gazeHeatSeats.Length);
+        for (int i = 0; i < seatCount; i++)
+        {
+            if (gazeHeatSeats[i] == null) continue;
+            gazeHeatSeats[i].color = ColorForTime(times[i], avg, IsTop2(i, topIndices));
+        }
+
+        // Render the top-3 line. Skip silently if no non-zero values exist
+        // (e.g. the heatmap label still shows but the top-3 line stays blank).
+        if (gazeHeatTop3 != null)
+        {
+            string body = BuildTop3Body(topIndices, times);
+            if (string.IsNullOrEmpty(body))
+            {
+                gazeHeatTop3.text = string.Empty;
+            }
+            else
+            {
+                string template = Localization.Get("results_heatmap_top3_format");
+                try   { gazeHeatTop3.text = string.Format(template, body); }
+                catch { gazeHeatTop3.text = $"{template} {body}"; }
+            }
+        }
+    }
+
+    private static bool IsTop2(int avatarIndex, int[] topIndices)
+        => avatarIndex == topIndices[0] || avatarIndex == topIndices[1];
+
+    private static Color ColorForTime(float t, float avg, bool isTop2)
+    {
+        // 0s → cool gray
+        if (t <= 0f) return HeatColorZero;
+
+        // Top-1/top-2 above 1.5×avg → deep red
+        if (isTop2 && t >= avg * 1.5f) return HeatColorHot;
+
+        // 0 < t < avg → blue-gray to neutral
+        if (t < avg)
+        {
+            float k = avg > 0f ? Mathf.InverseLerp(0f, avg, t) : 0f;
+            return Color.Lerp(HeatColorZero, HeatColorNeutral, k);
+        }
+
+        // avg < t < 1.5×avg → neutral to warm orange
+        if (t < avg * 1.5f)
+        {
+            float k = Mathf.InverseLerp(avg, avg * 1.5f, t);
+            return Color.Lerp(HeatColorNeutral, HeatColorWarm, k);
+        }
+
+        // t >= 1.5×avg but not in top-2 → stay warm orange (not promoted to red)
+        return HeatColorWarm;
+    }
+
+    private static string BuildTop3Body(int[] topIndices, float[] times)
+    {
+        // Compose e.g. "Avatar #4: 12s · Avatar #7: 9s · Avatar #1: 4s".
+        // Avatar labels are 1-indexed for human readability (matches the
+        // hierarchy's "Desk_00" → "Avatar #1" convention researchers expect).
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < topIndices.Length; i++)
+        {
+            int idx = topIndices[i];
+            if (idx < 0) break;
+            if (sb.Length > 0) sb.Append(" · "); // middot
+            sb.Append($"Avatar #{idx + 1}: {Mathf.RoundToInt(times[idx])}s");
+        }
+        return sb.ToString();
+    }
+
+    private static Color Hex(string hex)
+    {
+        return ColorUtility.TryParseHtmlString(hex, out Color c) ? c : Color.magenta;
     }
 
     // ── Score computations ─────────────────────────────────────────────────────

@@ -27,6 +27,9 @@ using TMPro;
 ///   Dev_StartingAudienceState — initial AudienceState at session start (0=Engaged)
 ///   Dev_ForceGazeZone       — -1 = real tracking; 0=Audience, 1=Lectern, 2=Other
 ///   Consent_Granted         — 0/1 first-launch consent; gate for reaching the menu
+///   Settings_Responsiveness — "easy"/"medium"/"hard" (Task 2d), mirrored from the
+///                              dev panel "Force Responsiveness" row for mid-Play
+///                              testing. Authoritative writer is SettingsMenuController.
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
@@ -90,6 +93,19 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Toggle  devForceGazeToggle;
     [Tooltip("3 buttons in order: Audience(0), Lectern(1), Other(2)")]
     [SerializeField] private Button[] devGazeButtons;
+
+    [Header("Dev Panel — Force Responsiveness (Task 2d)")]
+    [Tooltip("Writes Settings_Responsiveness pref. Takes effect on the NEXT session start " +
+             "(rule engine + per-avatar stagger window are sampled once at start). " +
+             "Use Stop + Play to re-apply on the current session.")]
+    [SerializeField] private Button          devForceResponsivenessEasy;
+    [SerializeField] private Button          devForceResponsivenessMedium;
+    [SerializeField] private Button          devForceResponsivenessHard;
+    [SerializeField] private TextMeshProUGUI devForceResponsivenessEasyLabel;
+    [SerializeField] private TextMeshProUGUI devForceResponsivenessMediumLabel;
+    [SerializeField] private TextMeshProUGUI devForceResponsivenessHardLabel;
+    [Tooltip("Optional row-header label rendered in front of the three buttons (e.g. 'Force responsiveness:').")]
+    [SerializeField] private TextMeshProUGUI devForceResponsivenessHeaderLabel;
 
     private const int   DefaultMinutes       = 5;
     private const float DefaultMockInterval  = 4f;
@@ -206,6 +222,61 @@ public class MainMenuController : MonoBehaviour
 
         HighlightButtons(devGazeButtons, _selectedGazeZone);
         SetGazeButtonsInteractable(gazeForced);
+
+        WireDevForceResponsivenessRow();
+        HighlightDevResponsivenessButtons();
+    }
+
+    // ── Dev panel — force-responsiveness row (Task 2d) ────────────────────────
+
+    /// <summary>
+    /// Hooks the three "Force Responsiveness" dev-panel buttons to write the
+    /// Settings_Responsiveness pref. The pref takes effect on the next session
+    /// start — researchers should Stop + Play to re-apply on the currently
+    /// running scene. We re-highlight the row after every click so the active
+    /// level is visually obvious without leaving the dev panel.
+    /// </summary>
+    private void WireDevForceResponsivenessRow()
+    {
+        if (devForceResponsivenessEasy != null)
+        {
+            devForceResponsivenessEasy.onClick.RemoveAllListeners();
+            devForceResponsivenessEasy.onClick.AddListener(() => OnDevForceResponsiveness("easy"));
+        }
+        if (devForceResponsivenessMedium != null)
+        {
+            devForceResponsivenessMedium.onClick.RemoveAllListeners();
+            devForceResponsivenessMedium.onClick.AddListener(() => OnDevForceResponsiveness("medium"));
+        }
+        if (devForceResponsivenessHard != null)
+        {
+            devForceResponsivenessHard.onClick.RemoveAllListeners();
+            devForceResponsivenessHard.onClick.AddListener(() => OnDevForceResponsiveness("hard"));
+        }
+    }
+
+    private void OnDevForceResponsiveness(string level)
+    {
+        PlayerPrefs.SetString("Settings_Responsiveness", level);
+        PlayerPrefs.Save();
+        HighlightDevResponsivenessButtons();
+        // The user-facing Settings panel will re-read Settings_Responsiveness
+        // the next time it's opened (via OpenSettingsPanel → RefreshFromPlayerPrefs),
+        // so the radio there will visually sync automatically.
+        Debug.Log($"[MainMenu] Settings_Responsiveness → {level} (effective on next session start)");
+    }
+
+    private void HighlightDevResponsivenessButtons()
+    {
+        string current = PlayerPrefs.GetString("Settings_Responsiveness", "medium").ToLowerInvariant();
+        int active = current == "easy" ? 0 : current == "hard" ? 2 : 1;
+
+        var trio = new Button[] {
+            devForceResponsivenessEasy,
+            devForceResponsivenessMedium,
+            devForceResponsivenessHard
+        };
+        HighlightButtons(trio, active);
     }
 
     // ── Save dev settings to PlayerPrefs ──────────────────────────────────────
@@ -477,6 +548,17 @@ public class MainMenuController : MonoBehaviour
         if (consentBlockedTitleLabel != null) consentBlockedTitleLabel.text = Localization.Get("consent_blocked_title");
         if (consentBlockedBodyLabel  != null) consentBlockedBodyLabel.text  = Localization.Get("consent_blocked_body");
         if (consentRetryLabel        != null) consentRetryLabel.text        = Localization.Get("consent_retry");
+
+        // Dev panel — Force Responsiveness row (Task 2d). Localized so the
+        // dev row matches whichever language the researcher is testing in.
+        if (devForceResponsivenessHeaderLabel != null)
+            devForceResponsivenessHeaderLabel.text = Localization.Get("dev_force_responsiveness");
+        if (devForceResponsivenessEasyLabel   != null)
+            devForceResponsivenessEasyLabel.text   = Localization.Get("settings_responsiveness_easy");
+        if (devForceResponsivenessMediumLabel != null)
+            devForceResponsivenessMediumLabel.text = Localization.Get("settings_responsiveness_medium");
+        if (devForceResponsivenessHardLabel   != null)
+            devForceResponsivenessHardLabel.text   = Localization.Get("settings_responsiveness_hard");
 
         // Update the duration suffix label too.
         if (durationSlider != null) UpdateLabel(durationSlider.value);

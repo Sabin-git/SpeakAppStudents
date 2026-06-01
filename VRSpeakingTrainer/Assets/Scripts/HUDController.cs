@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using TMPro;
 
@@ -47,8 +48,26 @@ public class HUDController : MonoBehaviour
     private void HandleSessionStart()
     {
         if (timerLabel      != null) timerLabel.gameObject.SetActive(true);
-        if (transcriptLabel != null) { transcriptLabel.text = Localization.Get("hud_transcript_placeholder"); transcriptLabel.gameObject.SetActive(true); }
-        if (wpmLabel        != null) { wpmLabel.text = Localization.Get("hud_wpm_zero"); wpmLabel.gameObject.SetActive(true); }
+        if (transcriptLabel != null) transcriptLabel.gameObject.SetActive(true);
+        if (wpmLabel        != null) wpmLabel.gameObject.SetActive(true);
+
+        // Wait for Localization to finish loading before populating initial
+        // labels — avoids showing the raw key name (e.g. "hud_transcript_placeholder")
+        // when MainMenu was skipped or the JSON load is still in flight.
+        // Also kicks off the load defensively if no scene has done so yet
+        // (e.g. when entering Play Mode directly in the Session scene).
+        StartCoroutine(SetInitialLabelsWhenLoaded());
+    }
+
+    private IEnumerator SetInitialLabelsWhenLoaded()
+    {
+        if (!Localization.IsLoaded)
+            Localization.Load(this);
+
+        while (!Localization.IsLoaded) yield return null;
+
+        if (transcriptLabel != null) transcriptLabel.text = Localization.Get("hud_transcript_placeholder");
+        if (wpmLabel        != null) wpmLabel.text        = Localization.Get("hud_wpm_zero");
     }
 
     private void HandleSessionEnd(SpeechMetrics _)
@@ -67,6 +86,16 @@ public class HUDController : MonoBehaviour
     private void HandleMetrics(SpeechMetrics m)
     {
         if (wpmLabel == null) return;
+
+        // If Localization isn't loaded yet, skip formatting — Get() would
+        // return the raw key "hud_wpm_format" which has no {0} placeholder,
+        // so string.Format leaves it unchanged and the user sees the key.
+        if (!Localization.IsLoaded)
+        {
+            wpmLabel.text = Mathf.RoundToInt(m.wpm) + " WPM";
+            return;
+        }
+
         string template = Localization.Get("hud_wpm_format");
         try   { wpmLabel.text = string.Format(template, Mathf.RoundToInt(m.wpm)); }
         catch { wpmLabel.text = Mathf.RoundToInt(m.wpm) + " WPM"; }

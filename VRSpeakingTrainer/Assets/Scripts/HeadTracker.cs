@@ -4,9 +4,21 @@ using UnityEngine;
 /// Reads XR camera orientation every frame, classifies gaze zone, accumulates
 /// time per zone, detects per-avatar eye contact. Emits HeadMetrics every frame.
 /// Zone boundaries are Inspector-configurable.
+///
+/// Per-avatar gaze accumulation (Task 4): each frame the gazed-avatar index is
+/// valid (0–9), we add Time.deltaTime into _timeOnAvatar[index]. At session end
+/// those 10 floats are persisted to Results_TimeOnAvatar_0..9 PlayerPrefs so the
+/// Results scene can render the gaze heat map widget. The per-avatar accumulator
+/// is reset at HandleSessionStart so a replayed session doesn't double-count.
 /// </summary>
 public class HeadTracker : MonoBehaviour
 {
+    // Task 4 — per-avatar gaze time accumulator. Indexed by avatarIndex (0–9).
+    // Read once per frame (Update), written 10 PlayerPrefs at session end.
+    // Not [SerializeField] — wiring is purely automatic; exposing it would
+    // confuse the Inspector and isn't useful for tuning.
+    private readonly float[] _timeOnAvatar = new float[10];
+
     public static event System.Action<HeadMetrics> OnHeadMetricsUpdated;
 
     [Header("Zone Boundaries (degrees)")]
@@ -74,6 +86,11 @@ public class HeadTracker : MonoBehaviour
         _metrics   = default;
         _isRunning = true;
 
+        // Task 4 — zero out the per-avatar accumulator so a replayed session
+        // starts clean. Without this, the heat map would show cumulative gaze
+        // across every session since app launch.
+        for (int i = 0; i < _timeOnAvatar.Length; i++) _timeOnAvatar[i] = 0f;
+
         // Apply gaze zone override from dev panel.
         int zoneOverride = PlayerPrefs.GetInt("Dev_ForceGazeZone", -1);
         if (zoneOverride >= 0)
@@ -92,6 +109,13 @@ public class HeadTracker : MonoBehaviour
         PlayerPrefs.SetFloat("Results_TimeOnAudience", _metrics.timeOnAudience);
         PlayerPrefs.SetFloat("Results_TimeOnLectern",  _metrics.timeOnLectern);
         PlayerPrefs.SetFloat("Results_TimeOnOther",    _metrics.timeOnOther);
+
+        // Task 4 — write per-avatar gaze totals for the Results heat map.
+        // Always writes all 10 keys (zero for avatars that were never gazed
+        // at) so the Results scene can read a consistent set every time.
+        for (int i = 0; i < _timeOnAvatar.Length; i++)
+            PlayerPrefs.SetFloat($"Results_TimeOnAvatar_{i}", _timeOnAvatar[i]);
+
         PlayerPrefs.Save();
         _isRunning = false;
     }
@@ -115,6 +139,13 @@ public class HeadTracker : MonoBehaviour
         _metrics.currentZone    = zone;
         _metrics.isFacingCrowd  = zone == GazeZone.Audience;
         _metrics.gazedAvatarIndex = DetectGazedAvatar();
+
+        // Task 4 — accumulate per-avatar gaze time. Guard the bounds check
+        // explicitly here rather than relying on _timeOnAvatar.Length, so the
+        // intent ("10 avatars, indices 0–9") is obvious at the call site.
+        int gazed = _metrics.gazedAvatarIndex;
+        if (gazed >= 0 && gazed < _timeOnAvatar.Length)
+            _timeOnAvatar[gazed] += Time.deltaTime;
 
         OnHeadMetricsUpdated?.Invoke(_metrics);
     }
