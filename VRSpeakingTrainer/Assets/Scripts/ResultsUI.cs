@@ -56,16 +56,38 @@ public class ResultsUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI fillersText;
     [SerializeField] private TextMeshProUGUI wpmText;
 
-    [Header("Gaze Heat Map (Task 4 — optional; widget skipped if root is null)")]
-    [Tooltip("Container GameObject for the entire heat map widget; toggled off if " +
-             "the widget is not wired in the Editor.")]
+    [Header("Gaze Heat Map (Task 4 — opens as a modal overlay from the Results screen)")]
+    [Tooltip("Button on the main Results screen that opens the heat map overlay. " +
+             "Wired in Start() to call OpenHeatMapOverlay. Optional — if null, the heat " +
+             "map is unreachable from the UI but the data is still computed.")]
+    [SerializeField] private Button gazeHeatOpenButton;
+    [Tooltip("Label TMP on the open button — localized to 'Where you looked' / " +
+             "'Waar je keek'. Set from results_heatmap_label.")]
+    [SerializeField] private TextMeshProUGUI gazeHeatOpenButtonLabel;
+    [Tooltip("Container GameObject for the heat map modal overlay (Backdrop + Card). " +
+             "Toggled off at Start(); opens via gazeHeatOpenButton, closes via " +
+             "gazeHeatCloseButton. Heat map cells are populated at Start() so data " +
+             "is ready by the time the user opens the overlay.")]
     [SerializeField] private GameObject gazeHeatMapRoot;
+    [Tooltip("Close button inside the heat map overlay's Card. Hides the overlay.")]
+    [SerializeField] private Button gazeHeatCloseButton;
+    [Tooltip("Label TMP on the close button. Localized from settings_back.")]
+    [SerializeField] private TextMeshProUGUI gazeHeatCloseButtonLabel;
     [Tooltip("10 seat Images, indexed by avatarIndex. Seat[i] must correspond to " +
              "Desk_NN's avatarIndex == i so the 2×5 grid matches the audience layout.")]
     [SerializeField] private Image[]  gazeHeatSeats = new Image[10];
     [Tooltip("Top-3 most-looked-at avatars line. Format string lives in Localization key " +
              "results_heatmap_top3_format (e.g. 'Most-looked-at avatars: {0}').")]
     [SerializeField] private TextMeshProUGUI gazeHeatTop3;
+    [Tooltip("Heat-map modal — time spent looking at the audience. Format: " +
+             "results_heatmap_audience_format (e.g. 'Looking at audience: {0}'). Optional.")]
+    [SerializeField] private TextMeshProUGUI gazeHeatAudienceTime;
+    [Tooltip("Heat-map modal — time spent looking at the lectern. Format: " +
+             "results_heatmap_lectern_format. Optional.")]
+    [SerializeField] private TextMeshProUGUI gazeHeatLecternTime;
+    [Tooltip("Heat-map modal — time spent looking elsewhere. Format: " +
+             "results_heatmap_other_format. Optional.")]
+    [SerializeField] private TextMeshProUGUI gazeHeatOtherTime;
 
     // ── Debug value pools ──────────────────────────────────────────────────────
     // Each pool covers a range of realistic values — good, average, and poor —
@@ -130,8 +152,26 @@ public class ResultsUI : MonoBehaviour
         int   overall     = Mathf.RoundToInt(speechScore * 0.35f + fillerScore * 0.25f + gazeScore * 0.40f);
 
         PopulateUI(overall, speechScore, fillerScore, gazeScore, duration);
-        PopulateRawMetrics(words, fillers, avgWpm);
-        PopulateGazeHeatMap();
+
+        // Feature B — in silent mode (mic disabled) the speech metrics are all
+        // zero, so hide the raw Words/Fillers/WPM labels rather than showing a
+        // misleading "0 / 0 / 0". Debug mode still shows its random pool values
+        // (debug intent wins). The speech/pacing score bars stay as computed so
+        // the overall score honestly reflects the silent run.
+        bool micEnabled = PlayerPrefs.GetInt("Settings_MicEnabled", 1) == 1;
+        if (!micEnabled && !debugMode)
+            HideRawMetrics();
+        else
+            PopulateRawMetrics(words, fillers, avgWpm);
+
+        PopulateGazeHeatMap(audience, lectern, other);
+    }
+
+    private void HideRawMetrics()
+    {
+        if (wordsText   != null) wordsText.gameObject.SetActive(false);
+        if (fillersText != null) fillersText.gameObject.SetActive(false);
+        if (wpmText     != null) wpmText.gameObject.SetActive(false);
     }
 
     private void PopulateRawMetrics(int words, int fillers, float avgWpm)
@@ -161,20 +201,44 @@ public class ResultsUI : MonoBehaviour
     private static readonly Color HeatColorWarm    = Hex("#D89870");
     private static readonly Color HeatColorHot     = Hex("#C9504C");
 
-    private void PopulateGazeHeatMap()
+    private void PopulateGazeHeatMap(float audienceSeconds, float lecternSeconds, float otherSeconds)
     {
-        if (gazeHeatMapRoot == null || gazeHeatSeats == null || gazeHeatSeats.Length == 0
-            || gazeHeatSeats[0] == null)
+        // Wire open / close buttons. The heat map is now a modal overlay
+        // (Backdrop + Card pattern), opened from a button on the main Results
+        // screen rather than rendered inline. Data is populated below so the
+        // grid is ready by the time the user opens the overlay.
+        if (gazeHeatOpenButton != null)
+        {
+            gazeHeatOpenButton.onClick.RemoveAllListeners();
+            gazeHeatOpenButton.onClick.AddListener(OpenHeatMapOverlay);
+        }
+        if (gazeHeatCloseButton != null)
+        {
+            gazeHeatCloseButton.onClick.RemoveAllListeners();
+            gazeHeatCloseButton.onClick.AddListener(CloseHeatMapOverlay);
+        }
+
+        // Localized labels for the open + close buttons.
+        if (gazeHeatOpenButtonLabel != null)
+            gazeHeatOpenButtonLabel.text = Localization.Get("results_heatmap_label");
+        if (gazeHeatCloseButtonLabel != null)
+            gazeHeatCloseButtonLabel.text = Localization.Get("settings_back");
+
+        // Overlay starts hidden; user reveals it via the open button.
+        if (gazeHeatMapRoot != null) gazeHeatMapRoot.SetActive(false);
+
+        if (gazeHeatSeats == null || gazeHeatSeats.Length == 0 || gazeHeatSeats[0] == null)
         {
             // Wiring not present — keep the rest of the Results screen
             // working and just log once so devs notice during play-testing.
-            Debug.Log("[ResultsUI] Gaze heat map not wired — skipping. " +
-                      "Wire gazeHeatMapRoot + gazeHeatSeats[10] + gazeHeatTop3 in the Inspector.");
-            if (gazeHeatMapRoot != null) gazeHeatMapRoot.SetActive(false);
+            Debug.Log("[ResultsUI] Gaze heat map seats not wired — skipping. " +
+                      "Wire gazeHeatMapRoot (overlay) + gazeHeatSeats[10] + gazeHeatTop3 + " +
+                      "gazeHeatOpenButton + gazeHeatCloseButton in the Inspector.");
+            // Hide the open button if its target overlay isn't wired so users
+            // don't click a button that opens an empty overlay.
+            if (gazeHeatOpenButton != null) gazeHeatOpenButton.gameObject.SetActive(false);
             return;
         }
-
-        gazeHeatMapRoot.SetActive(true);
 
         // Read the 10 per-avatar prefs once and compute the average over
         // non-zero values. If every avatar is zero (no gaze data this session)
@@ -235,6 +299,31 @@ public class ResultsUI : MonoBehaviour
                 catch { gazeHeatTop3.text = $"{template} {body}"; }
             }
         }
+
+        // Per-zone gaze totals (audience / lectern / other). Same M:SS time
+        // formatting as the session-time line so all durations on the Results
+        // screen read identically. Each label is independently optional —
+        // wire only the ones you want shown.
+        if (gazeHeatAudienceTime != null)
+            gazeHeatAudienceTime.text = Format(Localization.Get("results_heatmap_audience_format"), FormatTime(audienceSeconds));
+        if (gazeHeatLecternTime != null)
+            gazeHeatLecternTime.text  = Format(Localization.Get("results_heatmap_lectern_format"),  FormatTime(lecternSeconds));
+        if (gazeHeatOtherTime != null)
+            gazeHeatOtherTime.text    = Format(Localization.Get("results_heatmap_other_format"),    FormatTime(otherSeconds));
+    }
+
+    // ── Heat map overlay open/close ────────────────────────────────────────────
+
+    /// <summary>Called by the gazeHeatOpenButton onClick. Shows the heat map modal.</summary>
+    public void OpenHeatMapOverlay()
+    {
+        if (gazeHeatMapRoot != null) gazeHeatMapRoot.SetActive(true);
+    }
+
+    /// <summary>Called by the gazeHeatCloseButton onClick. Hides the heat map modal.</summary>
+    public void CloseHeatMapOverlay()
+    {
+        if (gazeHeatMapRoot != null) gazeHeatMapRoot.SetActive(false);
     }
 
     private static bool IsTop2(int avatarIndex, int[] topIndices)

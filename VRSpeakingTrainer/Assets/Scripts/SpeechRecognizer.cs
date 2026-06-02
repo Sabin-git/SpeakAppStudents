@@ -11,14 +11,19 @@ using UnityEngine.Networking;
 ///
 /// Mock mode: when enabled, fires fake transcripts on a timer instead of hitting the API.
 /// Use this during development to avoid consuming API quota.
+///
+/// Silent mode (Feature B): when the user disables the microphone in Settings
+/// (Settings_MicEnabled == 0), NO capture, NO API calls, and NO mock phrases
+/// run. The audience receives no transcripts, so the analyzer's pause grows
+/// unbounded and the rule engine naturally drifts the crowd toward Restless.
 /// </summary>
 public class SpeechRecognizer : MonoBehaviour
 {
     public static event Action<string, bool> OnTranscriptionResult;
 
     [Header("Settings")]
-    [Tooltip("How many seconds of audio to send per API call")]
-    [SerializeField] private int chunkSeconds = 5;
+    [Tooltip("How many seconds of audio to send per API call. Smaller = lower live-WPM latency but more HTTP overhead. Google STT bills in 15s increments so cost is unaffected below 15.")]
+    [SerializeField] private int chunkSeconds = 3;
     [SerializeField] private int sampleRate   = 16000;
 
     [Header("Mock Mode - Only use for debugging to save API calls")]
@@ -181,6 +186,10 @@ public class SpeechRecognizer : MonoBehaviour
     private float _mockTimer;
     private int   _mockPhraseIndex;
 
+    // Feature B — microphone master switch from Settings (default ON). When
+    // false the recognizer runs fully silent: no mic, no API, no mock.
+    private bool _micEnabled = true;
+
     // Language selection — read once at session start from the Language PlayerPref
     // (driven by Localization). Determines both the STT languageCode sent to
     // Google and which mock phrase array is used in mock mode.
@@ -197,6 +206,20 @@ public class SpeechRecognizer : MonoBehaviour
         mockMode     = PlayerPrefs.GetInt  ("Dev_MockMode",     0)   == 1;
         mockMuted    = PlayerPrefs.GetInt  ("Dev_MockMuted",    0)   == 1;
         mockInterval = PlayerPrefs.GetFloat("Dev_MockInterval", 4f);
+
+        // Feature B — microphone master switch. Read once here; constant for
+        // the lifetime of this Session scene instance.
+        _micEnabled  = PlayerPrefs.GetInt  ("Settings_MicEnabled", 1) == 1;
+
+        if (!_micEnabled)
+        {
+            // Force mock off too so the Update loop never emits phrases. We
+            // skip API key loading entirely — nothing is sent to Google.
+            mockMode = false;
+            Debug.Log("[SpeechRecognizer] Microphone disabled in Settings — silent mode " +
+                      "(no STT, no mock). Audience will drift to Restless.");
+            return;
+        }
 
         if (!mockMode)
             StartCoroutine(LoadApiKey());
@@ -242,6 +265,13 @@ public class SpeechRecognizer : MonoBehaviour
 
     private void OnSessionStart()
     {
+        // Feature B — silent mode short-circuit. No capture, no API, no mock.
+        if (!_micEnabled)
+        {
+            Debug.Log("[SpeechRecognizer] Session started in silent mode (mic off) — no capture.");
+            return;
+        }
+
         // Language pref is read ONCE per session here — never per-frame. Used
         // both to choose the mock phrase array and to pick the languageCode
         // sent to Google STT in SendChunk.

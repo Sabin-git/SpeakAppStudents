@@ -21,11 +21,12 @@ public class SpeechAnalyzer : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private float emitInterval   = 2f;
-    [SerializeField] private float wpmWindow      = 10f;  // seconds for rolling WPM
+    [Tooltip("Seconds of recent chunks averaged into the live HUD WPM. Larger = smoother, slower to react. Tuned to 12s to balance noise from 3s chunks.")]
+    [SerializeField] private float wpmWindow      = 12f;
     [SerializeField] private float fillerWindow   = 30f;  // seconds for filler count
     [SerializeField] private float pauseThreshold = 1.5f; // seconds before gap is a pause
-    [Tooltip("EMA smoothing factor for WPM display (0=no change, 1=instant). 0.4–0.6 recommended.")]
-    [SerializeField] [Range(0f, 1f)] private float wpmSmoothing = 0.5f;
+    [Tooltip("EMA smoothing factor for WPM display (0=no change, 1=instant). 0.4 = moderate damping. Combine with wpmWindow=12 for smooth ~3–4s lag.")]
+    [SerializeField] [Range(0f, 1f)] private float wpmSmoothing = 0.4f;
 
     // English filler set. Listed longer-multi-word entries first so the
     // CountFillers loop matches them before single-token substrings (CountFillers

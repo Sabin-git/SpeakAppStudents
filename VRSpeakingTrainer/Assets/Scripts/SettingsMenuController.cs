@@ -10,29 +10,28 @@ using TMPro;
 ///                     reloads the localization dictionary live.
 ///   2) Privacy/data — consent-status readout, "Review consent" (reopens the
 ///                     consent screen via MainMenuController), "Privacy policy"
-///                     (opens the in-app text sub-panel).
-///   3) VR comfort   — brightness slider (0–1) + vignetting toggle.
+///                     (opens the in-app text sub-panel), and the "Allow
+///                     microphone" toggle (Feature B — writes Settings_MicEnabled;
+///                     OFF = silent session, no STT).
+///   3) Audience     — responsiveness radio (Easy / Medium / Hard), writes
+///                     Settings_Responsiveness. Picked up at session start by
+///                     AudienceRuleEngine, AudienceMember, HeadTracker.
+///   4) Advanced     — "Show developer button" toggle (Feature A), writes
+///                     Settings_ShowDevButton and asks MainMenuController to
+///                     re-apply the MainMenu Developer button's visibility.
 ///
-/// The developer panel is unrelated and is NOT touched by this controller.
+/// The developer panel itself is unrelated and is NOT touched by this controller.
 ///
 /// PlayerPrefs touched here:
 ///   Language               — string ("en" | "nl"), default "en" (shared with Localization)
-///   Settings_Brightness    — float 0..1,            default 1.0
-///   Settings_Vignetting    — int 0/1,               default 0
 ///   Settings_Responsiveness— string ("easy"|"medium"|"hard"), default "medium"
 ///                            Read at session start by AudienceRuleEngine, AudienceMember
 ///                            (and Task 4 HeadTracker). Constant during a session.
+///   Settings_ShowDevButton — int 0/1, default 0 (hidden). Read by MainMenuController
+///                            to show/hide the MainMenu Developer button.
+///   Settings_MicEnabled    — int 0/1, default 1 (on). Read at session start by
+///                            SpeechRecognizer (silent mode), HUDController, ResultsUI.
 ///   Consent_Granted        — int 0/1,               default 0 (READ here, WRITTEN by MainMenuController)
-///
-/// Brightness is applied at runtime through a full-screen black overlay Image
-/// whose alpha = (1 - brightness). The overlay GameObject is wired in the
-/// Inspector (overlay lives on the MainMenu canvas and persists across the
-/// session scene via DontDestroyOnLoad — see WIRING_TASK_2.md).
-///
-/// Vignetting is applied at runtime through a separate full-screen Image whose
-/// alpha is driven by head angular velocity (degrees per second). When the
-/// toggle is OFF, the overlay is hidden. When ON, the overlay's alpha fades in
-/// above ~60 deg/s of head rotation and fades back out below it.
 ///
 /// All user-facing strings are pulled from Localization.Get() so the panel
 /// matches the active Language pref.
@@ -68,6 +67,10 @@ public class SettingsMenuController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI reviewConsentLabel;
     [SerializeField] private Button          privacyPolicyButton;
     [SerializeField] private TextMeshProUGUI privacyPolicyLabel;
+    [Tooltip("Feature B — when OFF, the session runs with no microphone/STT (silent " +
+             "crowd that drifts to Restless). Default ON. Writes Settings_MicEnabled.")]
+    [SerializeField] private Toggle          allowMicToggle;
+    [SerializeField] private TextMeshProUGUI allowMicLabel;
 
     [Header("Privacy policy sub-panel")]
     [SerializeField] private TextMeshProUGUI privacyPolicyTitleLabel;
@@ -87,59 +90,24 @@ public class SettingsMenuController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI mediumToggleLabel;
     [SerializeField] private TextMeshProUGUI hardToggleLabel;
 
-    [Header("VR comfort section")]
-    [SerializeField] private TextMeshProUGUI comfortSectionLabel;
-    [SerializeField] private TextMeshProUGUI brightnessLabel;
-    [SerializeField] private Slider          brightnessSlider;        // 0..1
-    [SerializeField] private TextMeshProUGUI vignettingLabel;
-    [SerializeField] private Toggle          vignettingToggle;
-
-    [Header("Runtime overlays (wired once, persist across scenes)")]
-    [Tooltip("Full-screen black Image. Its alpha is set to (1 - brightness). Parent canvas should have a very high sortingOrder so it covers everything.")]
-    [SerializeField] private Image           brightnessOverlay;
-    [Tooltip("Full-screen vignette Image (radial-alpha texture). Its alpha is driven by head angular velocity while the toggle is ON.")]
-    [SerializeField] private Image           vignetteOverlay;
-    [Tooltip("Camera whose rotation we sample to compute head angular velocity. Leave empty to auto-find Camera.main each scene.")]
-    [SerializeField] private Transform       headTransform;
-
-    [Header("Vignetting tuning")]
-    [Tooltip("Head angular velocity (deg/s) at which vignette starts fading IN.")]
-    [SerializeField] private float vignetteOnThreshold  = 60f;
-    [Tooltip("Head angular velocity (deg/s) at which vignette reaches full alpha.")]
-    [SerializeField] private float vignetteFullThreshold = 180f;
-    [Tooltip("Maximum alpha for the vignette overlay (1 = fully opaque edges).")]
-    [SerializeField, Range(0f, 1f)] private float vignetteMaxAlpha = 0.85f;
-    [Tooltip("How fast the vignette alpha lerps toward its target (per second).")]
-    [SerializeField] private float vignetteFadeSpeed     = 6f;
+    [Header("Advanced section (Feature A — dev button visibility)")]
+    [SerializeField] private TextMeshProUGUI advancedSectionLabel;
+    [SerializeField] private TextMeshProUGUI showDevButtonLabel;
+    [Tooltip("When ON, the MainMenu Developer button is shown. Default OFF (hidden) " +
+             "so participants don't see it. Writes Settings_ShowDevButton.")]
+    [SerializeField] private Toggle          showDevButtonToggle;
 
     // Hook back into MainMenuController for the "Review consent" button so we
     // don't duplicate the consent UI here. Assigned by MainMenuController in
     // its Start() through SetMainMenu().
     private MainMenuController _mainMenu;
 
-    // Runtime state for vignette
-    private Quaternion _lastHeadRot;
-    private bool       _haveLastHeadRot;
-    private float      _vignetteAlpha; // currently displayed alpha
-
-    private const float  DefaultBrightness     = 1f;
     private const string DefaultResponsiveness = "medium";
     private const string ResponsivenessEasy    = "easy";
     private const string ResponsivenessMedium  = "medium";
     private const string ResponsivenessHard    = "hard";
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
-
-    private void Awake()
-    {
-        // The brightness and vignette overlays MUST persist after MainMenu so
-        // they continue affecting the Session scene. Their parent canvas
-        // should already be set to DontDestroyOnLoad in the scene (see
-        // WIRING_TASK_2.md). We don't do that here because it would be a
-        // duplicate if the user already set it up.
-
-        ApplyInitialOverlayState();
-    }
 
     private void Start()
     {
@@ -151,11 +119,6 @@ public class SettingsMenuController : MonoBehaviour
         // Panels default to hidden — MainMenuController toggles them on demand.
         if (settingsPanelRoot       != null) settingsPanelRoot.SetActive(false);
         if (privacyPolicyPanelRoot  != null) privacyPolicyPanelRoot.SetActive(false);
-    }
-
-    private void Update()
-    {
-        UpdateVignetteFromHeadMotion();
     }
 
     /// <summary>Called by MainMenuController in its Start() to pass itself in.</summary>
@@ -235,24 +198,24 @@ public class SettingsMenuController : MonoBehaviour
             privacyPolicyButton.onClick.AddListener(OpenPrivacyPolicy);
         }
 
+        // Allow-microphone toggle (Feature B).
+        if (allowMicToggle != null)
+        {
+            allowMicToggle.onValueChanged.RemoveAllListeners();
+            allowMicToggle.onValueChanged.AddListener(OnAllowMicToggled);
+        }
+
         if (privacyPolicyBackButton != null)
         {
             privacyPolicyBackButton.onClick.RemoveAllListeners();
             privacyPolicyBackButton.onClick.AddListener(ClosePrivacyPolicy);
         }
 
-        if (brightnessSlider != null)
+        // Advanced — "Show developer button" (Feature A).
+        if (showDevButtonToggle != null)
         {
-            brightnessSlider.minValue = 0f;
-            brightnessSlider.maxValue = 1f;
-            brightnessSlider.onValueChanged.RemoveAllListeners();
-            brightnessSlider.onValueChanged.AddListener(OnBrightnessChanged);
-        }
-
-        if (vignettingToggle != null)
-        {
-            vignettingToggle.onValueChanged.RemoveAllListeners();
-            vignettingToggle.onValueChanged.AddListener(OnVignettingToggled);
+            showDevButtonToggle.onValueChanged.RemoveAllListeners();
+            showDevButtonToggle.onValueChanged.AddListener(OnShowDevButtonToggled);
         }
 
         // Audience responsiveness radio (Task 2d).
@@ -292,17 +255,6 @@ public class SettingsMenuController : MonoBehaviour
         if (langEnglishToggle != null) langEnglishToggle.SetIsOnWithoutNotify(lang == Localization.LangEnglish);
         if (langDutchToggle   != null) langDutchToggle.SetIsOnWithoutNotify  (lang == Localization.LangDutch);
 
-        // Brightness
-        float brightness = PlayerPrefs.GetFloat("Settings_Brightness", DefaultBrightness);
-        brightness = Mathf.Clamp01(brightness);
-        if (brightnessSlider != null) brightnessSlider.SetValueWithoutNotify(brightness);
-        ApplyBrightness(brightness);
-
-        // Vignetting toggle
-        bool vignettingOn = PlayerPrefs.GetInt("Settings_Vignetting", 0) == 1;
-        if (vignettingToggle != null) vignettingToggle.SetIsOnWithoutNotify(vignettingOn);
-        ApplyVignetteEnabled(vignettingOn);
-
         // Audience responsiveness radio — restore the active toggle from the
         // pref (default = medium). SetIsOnWithoutNotify so the listener doesn't
         // fire a redundant write back to PlayerPrefs.
@@ -311,6 +263,14 @@ public class SettingsMenuController : MonoBehaviour
         if (easyToggle   != null) easyToggle.SetIsOnWithoutNotify  (responsiveness == ResponsivenessEasy);
         if (mediumToggle != null) mediumToggle.SetIsOnWithoutNotify(responsiveness == ResponsivenessMedium);
         if (hardToggle   != null) hardToggle.SetIsOnWithoutNotify  (responsiveness == ResponsivenessHard);
+
+        // Advanced — show-developer-button toggle (Feature A). Default OFF.
+        bool showDev = PlayerPrefs.GetInt("Settings_ShowDevButton", 0) == 1;
+        if (showDevButtonToggle != null) showDevButtonToggle.SetIsOnWithoutNotify(showDev);
+
+        // Privacy — allow-microphone toggle (Feature B). Default ON.
+        bool micOn = PlayerPrefs.GetInt("Settings_MicEnabled", 1) == 1;
+        if (allowMicToggle != null) allowMicToggle.SetIsOnWithoutNotify(micOn);
     }
 
     private void RefreshLocalizedText()
@@ -326,14 +286,11 @@ public class SettingsMenuController : MonoBehaviour
         if (privacyStatusLabel       != null) privacyStatusLabel.text       = Localization.Get("settings_privacy_status_label");
         if (reviewConsentLabel       != null) reviewConsentLabel.text       = Localization.Get("settings_privacy_review_consent");
         if (privacyPolicyLabel       != null) privacyPolicyLabel.text       = Localization.Get("settings_privacy_policy_button");
+        if (allowMicLabel            != null) allowMicLabel.text            = Localization.Get("settings_privacy_allow_mic");
 
         if (privacyPolicyTitleLabel  != null) privacyPolicyTitleLabel.text  = Localization.Get("privacy_policy_title");
         if (privacyPolicyBodyLabel   != null) privacyPolicyBodyLabel.text   = Localization.Get("privacy_policy_body");
         if (privacyPolicyBackLabel   != null) privacyPolicyBackLabel.text   = Localization.Get("privacy_policy_back");
-
-        if (comfortSectionLabel      != null) comfortSectionLabel.text      = Localization.Get("settings_section_comfort");
-        if (brightnessLabel          != null) brightnessLabel.text          = Localization.Get("settings_comfort_brightness");
-        if (vignettingLabel          != null) vignettingLabel.text          = Localization.Get("settings_comfort_vignetting");
 
         // Audience section (Task 2d)
         if (audienceSectionLabel     != null) audienceSectionLabel.text     = Localization.Get("settings_section_audience");
@@ -341,6 +298,10 @@ public class SettingsMenuController : MonoBehaviour
         if (easyToggleLabel          != null) easyToggleLabel.text          = Localization.Get("settings_responsiveness_easy");
         if (mediumToggleLabel        != null) mediumToggleLabel.text        = Localization.Get("settings_responsiveness_medium");
         if (hardToggleLabel          != null) hardToggleLabel.text          = Localization.Get("settings_responsiveness_hard");
+
+        // Advanced section (Feature A)
+        if (advancedSectionLabel     != null) advancedSectionLabel.text     = Localization.Get("settings_section_advanced");
+        if (showDevButtonLabel       != null) showDevButtonLabel.text       = Localization.Get("settings_advanced_show_dev");
     }
 
     // ── Section: Language ─────────────────────────────────────────────────────
@@ -394,6 +355,19 @@ public class SettingsMenuController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Persists the microphone master switch (Feature B). OFF means the next
+    /// session runs silent — SpeechRecognizer starts no mic and makes no API
+    /// calls, the HUD hides WPM/transcript and shows "Microphone off", and the
+    /// audience drifts to Restless from the unbroken pause. Takes effect on the
+    /// next session start (read once in SpeechRecognizer/HUD/Results), not mid-run.
+    /// </summary>
+    private void OnAllowMicToggled(bool isOn)
+    {
+        PlayerPrefs.SetInt("Settings_MicEnabled", isOn ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
     private void OpenPrivacyPolicy()
     {
         if (privacyPolicyPanelRoot != null) privacyPolicyPanelRoot.SetActive(true);
@@ -421,94 +395,18 @@ public class SettingsMenuController : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    // ── Section: VR comfort ───────────────────────────────────────────────────
+    // ── Section: Advanced (Feature A — dev button visibility) ─────────────────
 
-    public void OnBrightnessChanged(float value)
+    /// <summary>
+    /// Persists the "show developer button" preference and asks MainMenuController
+    /// to re-apply the button's visibility immediately, so the change is visible
+    /// the moment the user closes Settings (no app restart needed).
+    /// </summary>
+    private void OnShowDevButtonToggled(bool isOn)
     {
-        value = Mathf.Clamp01(value);
-        PlayerPrefs.SetFloat("Settings_Brightness", value);
+        PlayerPrefs.SetInt("Settings_ShowDevButton", isOn ? 1 : 0);
         PlayerPrefs.Save();
-        ApplyBrightness(value);
-    }
-
-    public void OnVignettingToggled(bool isOn)
-    {
-        PlayerPrefs.SetInt("Settings_Vignetting", isOn ? 1 : 0);
-        PlayerPrefs.Save();
-        ApplyVignetteEnabled(isOn);
-    }
-
-    // ── Overlay application ───────────────────────────────────────────────────
-
-    private void ApplyInitialOverlayState()
-    {
-        float brightness = Mathf.Clamp01(PlayerPrefs.GetFloat("Settings_Brightness", DefaultBrightness));
-        ApplyBrightness(brightness);
-
-        bool vignettingOn = PlayerPrefs.GetInt("Settings_Vignetting", 0) == 1;
-        ApplyVignetteEnabled(vignettingOn);
-    }
-
-    private void ApplyBrightness(float brightness)
-    {
-        if (brightnessOverlay == null) return;
-        var c = brightnessOverlay.color;
-        c.r = 0f; c.g = 0f; c.b = 0f;
-        c.a = 1f - Mathf.Clamp01(brightness);
-        brightnessOverlay.color = c;
-        // Avoid blocking clicks behind the overlay.
-        brightnessOverlay.raycastTarget = false;
-        // Hide the GameObject entirely when fully transparent to save fillrate.
-        if (brightnessOverlay.gameObject.activeSelf != (c.a > 0.001f))
-            brightnessOverlay.gameObject.SetActive(c.a > 0.001f);
-    }
-
-    private void ApplyVignetteEnabled(bool enabled)
-    {
-        if (vignetteOverlay == null) return;
-        vignetteOverlay.raycastTarget = false;
-        if (!enabled)
-        {
-            _vignetteAlpha = 0f;
-            var c = vignetteOverlay.color;
-            c.a = 0f;
-            vignetteOverlay.color = c;
-            vignetteOverlay.gameObject.SetActive(false);
-        }
-        else
-        {
-            vignetteOverlay.gameObject.SetActive(true);
-        }
-    }
-
-    private void UpdateVignetteFromHeadMotion()
-    {
-        if (vignetteOverlay == null) return;
-        if (!vignetteOverlay.gameObject.activeSelf) return;
-        bool toggleOn = PlayerPrefs.GetInt("Settings_Vignetting", 0) == 1;
-        if (!toggleOn) return;
-
-        Transform head = headTransform != null ? headTransform : (Camera.main != null ? Camera.main.transform : null);
-        if (head == null) return;
-
-        Quaternion currentRot = head.rotation;
-        float angularVel = 0f;
-        if (_haveLastHeadRot && Time.deltaTime > 0f)
-        {
-            float deltaAngle = Quaternion.Angle(_lastHeadRot, currentRot);
-            angularVel = deltaAngle / Time.deltaTime;
-        }
-        _lastHeadRot     = currentRot;
-        _haveLastHeadRot = true;
-
-        // Map angular velocity to a 0..1 strength.
-        float t = Mathf.InverseLerp(vignetteOnThreshold, vignetteFullThreshold, angularVel);
-        float targetAlpha = Mathf.Clamp01(t) * vignetteMaxAlpha;
-        _vignetteAlpha = Mathf.MoveTowards(_vignetteAlpha, targetAlpha, vignetteFadeSpeed * Time.unscaledDeltaTime);
-
-        var c = vignetteOverlay.color;
-        c.a = _vignetteAlpha;
-        vignetteOverlay.color = c;
+        if (_mainMenu != null) _mainMenu.RefreshDevButtonVisibility();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -50,6 +50,12 @@ public class MainMenuController : MonoBehaviour
     [Tooltip("Group GameObjects containing the Start/Settings/Developer/PPTX buttons + duration slider + headers. All are SetActive(false) when consent is pending and SetActive(true) once consent is granted. Drag HeaderGroup, StartSessionGroup, OtherButtonsGroup here.")]
     [SerializeField] private GameObject[] mainMenuInteractiveRoots;
 
+    [Header("Developer button visibility (Feature A)")]
+    [Tooltip("The Developer button GameObject (under OtherButtonsGroup). Hidden by " +
+             "default; shown only when Settings_ShowDevButton == 1. Toggled from the " +
+             "Settings 'Show developer button' checkbox. Drag the DeveloperButton here.")]
+    [SerializeField] private GameObject developerButtonRoot;
+
     [Header("Panels")]
     [SerializeField] private GameObject devPanelRoot;
     [SerializeField] private GameObject settingsPanelRoot;
@@ -180,8 +186,12 @@ public class MainMenuController : MonoBehaviour
 
     private void RestoreDevSettings()
     {
-        if (devDebugToggle != null && PlayerPrefs.HasKey("DebugMode"))
-            devDebugToggle.isOn = PlayerPrefs.GetInt("DebugMode") == 1;
+        // Default OFF: "override presentation timer" must be off out of the box
+        // so a fresh install uses the real slider duration, not the custom one.
+        // GetInt default 0 (not HasKey-guarded) so an unset pref forces the
+        // toggle off rather than inheriting whatever the scene has it checked at.
+        if (devDebugToggle != null)
+            devDebugToggle.isOn = PlayerPrefs.GetInt("DebugMode", 0) == 1;
 
         if (devDurationInput != null)
         {
@@ -190,8 +200,10 @@ public class MainMenuController : MonoBehaviour
             devDurationInput.interactable = devDebugToggle != null && devDebugToggle.isOn;
         }
 
-        if (devMockToggle != null && PlayerPrefs.HasKey("Dev_MockMode"))
-            devMockToggle.isOn = PlayerPrefs.GetInt("Dev_MockMode") == 1;
+        // Default OFF: "turn off API" must be off out of the box so the real
+        // Google STT API is used by default; mock speech is opt-in only.
+        if (devMockToggle != null)
+            devMockToggle.isOn = PlayerPrefs.GetInt("Dev_MockMode", 0) == 1;
 
         if (devMuteToggle != null)
         {
@@ -483,6 +495,25 @@ public class MainMenuController : MonoBehaviour
         if (consentPanelRoot        != null) consentPanelRoot.SetActive(false);
         if (consentBlockedPanelRoot != null) consentBlockedPanelRoot.SetActive(false);
         SetInteractiveRootsActive(true);
+        // SetInteractiveRootsActive(true) re-enables OtherButtonsGroup, which
+        // owns the Developer button — re-apply the show/hide pref afterward so
+        // the button stays hidden by default for participants.
+        RefreshDevButtonVisibility();
+    }
+
+    // ── Developer button visibility (Feature A) ───────────────────────────────
+
+    /// <summary>
+    /// Shows or hides the Developer button based on the Settings_ShowDevButton
+    /// pref (default 0 = hidden). Called after the consent gate clears and
+    /// whenever the Settings "Show developer button" toggle is flipped (via
+    /// SettingsMenuController). Safe to call even if the button isn't wired.
+    /// </summary>
+    public void RefreshDevButtonVisibility()
+    {
+        if (developerButtonRoot == null) return;
+        bool show = PlayerPrefs.GetInt("Settings_ShowDevButton", 0) == 1;
+        developerButtonRoot.SetActive(show);
     }
 
     private void SetInteractiveRootsActive(bool active)

@@ -30,7 +30,11 @@ public class HeadTracker : MonoBehaviour
     [SerializeField] private float lecternVerticalDeg = 32f;
     [Tooltip("Horizontal half-angle for Lectern zone")]
     [SerializeField] private float lecternHorizontalDeg = 30f;
-    [Tooltip("Dead-zone buffer in degrees between zone boundaries")]
+    [Tooltip("Vertical half-range (degrees) above/below lecternVerticalDeg that still counts as Lectern. " +
+             "Increase to make the lectern zone more forgiving of head pitch. Audience zone wins where they overlap.")]
+    [SerializeField] private float lecternVerticalRangeDeg = 12f;
+    [Tooltip("Dead-zone buffer in degrees between Audience-lower-edge and Lectern-upper-edge. With the wider " +
+             "lecternVerticalRangeDeg the two zones usually overlap, in which case Audience priority wins and this is unused.")]
     [SerializeField] private float deadzoneBufDeg = 5f;
     [Tooltip("Cone half-angle for per-avatar gaze detection")]
     [SerializeField] private float avatarGazeDeg = 15f;
@@ -63,10 +67,15 @@ public class HeadTracker : MonoBehaviour
 
     private void Awake()
     {
-        // Precompute zone vertical boundaries from Inspector values
-        _audienceVertMin = -(lecternVerticalDeg - deadzoneBufDeg);  // e.g. -27°
-        _lecternVertMax  = _audienceVertMin - deadzoneBufDeg;        // e.g. -32°
-        _lecternVertMin  = -(lecternVerticalDeg + deadzoneBufDeg);   // e.g. -37°
+        // Precompute zone vertical boundaries from Inspector values.
+        // Lectern band is centred on lecternVerticalDeg and spans
+        // ±lecternVerticalRangeDeg around it — e.g. centre 32° + range 12° =
+        // lectern from -20° to -44° (24° tall). Audience-zone check has priority
+        // (see ClassifyZone), so any overlap between the bands is resolved in
+        // favour of Audience.
+        _audienceVertMin = -(lecternVerticalDeg - deadzoneBufDeg);   // e.g. -27°
+        _lecternVertMax  = -(lecternVerticalDeg - lecternVerticalRangeDeg); // e.g. -20°
+        _lecternVertMin  = -(lecternVerticalDeg + lecternVerticalRangeDeg); // e.g. -44°
     }
 
     private void OnEnable()
@@ -116,6 +125,12 @@ public class HeadTracker : MonoBehaviour
         for (int i = 0; i < _timeOnAvatar.Length; i++)
             PlayerPrefs.SetFloat($"Results_TimeOnAvatar_{i}", _timeOnAvatar[i]);
 
+        string timesCsv = string.Join(", ", System.Array.ConvertAll(_timeOnAvatar, t => t.ToString("F2")));
+        int    wiredCount = avatarTransforms != null ? avatarTransforms.Length : 0;
+        string camStatus  = xrCamera != null ? "set" : "NULL";
+        Debug.Log($"[HeadTracker] End-of-session per-avatar gaze times: [{timesCsv}] " +
+                  $"(avatarTransforms wired = {wiredCount}, xrCamera = {camStatus})");
+
         PlayerPrefs.Save();
         _isRunning = false;
     }
@@ -138,7 +153,12 @@ public class HeadTracker : MonoBehaviour
 
         _metrics.currentZone    = zone;
         _metrics.isFacingCrowd  = zone == GazeZone.Audience;
-        _metrics.gazedAvatarIndex = DetectGazedAvatar();
+        // Only detect per-avatar gaze while the user is actually in the
+        // Audience zone. Otherwise the 15° geometric cone can still catch a
+        // back-row avatar when the user pitches into the lectern or deadzone,
+        // and the per-avatar timer would tick up beyond the audience-zone
+        // total — see bug observed during user testing.
+        _metrics.gazedAvatarIndex = zone == GazeZone.Audience ? DetectGazedAvatar() : -1;
 
         // Task 4 — accumulate per-avatar gaze time. Guard the bounds check
         // explicitly here rather than relying on _timeOnAvatar.Length, so the
