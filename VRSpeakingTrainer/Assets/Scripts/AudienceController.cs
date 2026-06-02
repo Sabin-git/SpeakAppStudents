@@ -81,6 +81,11 @@ public class AudienceController : MonoBehaviour
             headTracker.avatarTransforms = new Transform[_members.Length];
             for (int i = 0; i < _members.Length; i++)
                 headTracker.avatarTransforms[i] = _members[i].transform;
+            Debug.Log($"[AudienceController] Wired {_members.Length} avatar transforms into HeadTracker for per-avatar gaze.");
+        }
+        else
+        {
+            Debug.LogWarning("[AudienceController] HeadTracker reference is NULL — per-avatar gaze and heat map will be empty. Wire _HeadTracker on _AudienceController in the Session scene.");
         }
 
         _lastGazedIndex = -1;

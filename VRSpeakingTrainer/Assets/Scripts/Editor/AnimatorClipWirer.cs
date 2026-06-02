@@ -105,12 +105,13 @@ public static class AnimatorClipWirer
 
         // ── 1b. Sitting clips from Assets/Models/Avatars/ override standing clips ─
         // Full-body seated animations replace any standing placeholders for the same state.
+        // Each state gets its own canonical seated clip — no shared / forced overrides.
         var sittingMap = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
         {
             { "Neutral-Fidgeting", "Neutral"    },
             { "Distracted",        "Distracted" },
             { "Engaged",           "Engaged"    },
-            // Restless intentionally omitted — it shares Neutral-Fidgeting as its base
+            { "Restless",          "Restless"   },
         };
 
         string[] avatarGuids = AssetDatabase.FindAssets("t:Model", new[] { "Assets/Models/Avatars" });
@@ -137,11 +138,6 @@ public static class AnimatorClipWirer
             clipsByState[stateName] = new List<AnimationClip> { clip };
             Debug.Log($"[AnimatorClipWirer] Sitting clip '{clip.name}' assigned to state '{stateName}'.");
         }
-
-        // Restless uses the same base clip as Neutral; its extra behaviour comes from
-        // DistractionReaction triggers fired randomly by AudienceMember at runtime.
-        if (clipsByState.TryGetValue("Neutral", out var neutralClips))
-            clipsByState["Restless"] = new List<AnimationClip>(neutralClips);
 
         // ── 2. Load the animator controller ──────────────────────────────────
 
