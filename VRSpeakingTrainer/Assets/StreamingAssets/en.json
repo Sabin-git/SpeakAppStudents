@@ -8,6 +8,14 @@
   "menu_minutes_suffix": " min",
   "menu_seconds_suffix": " s",
 
+  "pptx_panel_title": "Notes",
+  "pptx_note_indicator_format": "Note {0} / {1}",
+  "pptx_add_note": "+ Note",
+  "pptx_delete_note": "- Note",
+  "pptx_reset_sample": "Reset to sample",
+  "pptx_done": "Done",
+  "pptx_notes_placeholder": "Type your notes here - paragraphs or bullet points",
+
   "dev_panel_title": "Developer Settings",
   "dev_debug_mode": "Debug Mode",
   "dev_session_duration": "Custom Duration (s)",

@@ -8,6 +8,14 @@
   "menu_minutes_suffix": " min",
   "menu_seconds_suffix": " s",
 
+  "pptx_panel_title": "Notities",
+  "pptx_note_indicator_format": "Notitie {0} / {1}",
+  "pptx_add_note": "+ Notitie",
+  "pptx_delete_note": "- Notitie",
+  "pptx_reset_sample": "Voorbeeld herstellen",
+  "pptx_done": "Klaar",
+  "pptx_notes_placeholder": "Typ hier je notities - alinea's of opsommingstekens",
+
   "dev_panel_title": "Ontwikkelaarsinstellingen",
   "dev_debug_mode": "Debugmodus",
   "dev_session_duration": "Aangepaste duur (s)",

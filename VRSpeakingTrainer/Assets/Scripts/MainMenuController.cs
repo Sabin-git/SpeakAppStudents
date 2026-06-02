@@ -64,6 +64,27 @@ public class MainMenuController : MonoBehaviour
     [Header("Settings controller (Task 2)")]
     [SerializeField] private SettingsMenuController settingsMenu;
 
+    [Header("PPTX notes editor (Feature C — free-form notes)")]
+    [Tooltip("Title TMP at the top of the PPTX card.")]
+    [SerializeField] private TextMeshProUGUI pptxTitleLabel;
+    [Tooltip("Note indicator TMP — 'Note 2 / 5'.")]
+    [SerializeField] private TextMeshProUGUI pptxNoteIndicatorLabel;
+    [SerializeField] private Button          pptxPrevNoteButton;
+    [SerializeField] private Button          pptxNextNoteButton;
+    [Tooltip("Single multi-line text field holding the current note. Character limit + Multi-Line are set in code from NoteDeck.MaxNoteLength.")]
+    [SerializeField] private TMP_InputField  pptxNotesField;
+    [Tooltip("Optional 'used / max' character counter TMP. Updated as the user types. Leave empty to skip.")]
+    [SerializeField] private TextMeshProUGUI pptxCharCountLabel;
+    [SerializeField] private Button          pptxAddNoteButton;
+    [SerializeField] private Button          pptxDeleteNoteButton;
+    [SerializeField] private Button          pptxResetButton;
+    [Tooltip("Closes the PPTX panel ('Done'). Optional — the existing close button works too.")]
+    [SerializeField] private Button          pptxDoneButton;
+    [SerializeField] private TextMeshProUGUI pptxAddNoteLabel;
+    [SerializeField] private TextMeshProUGUI pptxDeleteNoteLabel;
+    [SerializeField] private TextMeshProUGUI pptxResetLabel;
+    [SerializeField] private TextMeshProUGUI pptxDoneLabel;
+
     [Header("Consent screen (Task 2 — first launch gate)")]
     [SerializeField] private GameObject       consentPanelRoot;
     [SerializeField] private TextMeshProUGUI  consentTitleLabel;
@@ -149,6 +170,11 @@ public class MainMenuController : MonoBehaviour
         }
 
         RestoreDevSettings();
+
+        // Feature C — seed the sample notes once per app run, then wire the
+        // notes-editor controls in the PPTX panel.
+        NoteDeck.LoadSampleIfEmpty();
+        WirePptxEditor();
 
         // Hand the Settings controller a reference to us so it can call back
         // into the consent flow ("Review consent" button) and ask us to
@@ -341,7 +367,13 @@ public class MainMenuController : MonoBehaviour
     // ── Panel open / close ─────────────────────────────────────────────────────
 
     public void OnDeveloperPressed()  => SetPanel(devPanelRoot,      true);
-    public void OnPPTXPressed()       => SetPanel(pptxPanelRoot,     true);
+
+    /// <summary>PPTX button on MainMenu. Opens the panel and refreshes the deck editor.</summary>
+    public void OnPPTXPressed()
+    {
+        SetPanel(pptxPanelRoot, true);
+        RefreshPptxEditor();
+    }
 
     /// <summary>
     /// Settings button on MainMenu. Delegates to SettingsMenuController so
@@ -367,6 +399,137 @@ public class MainMenuController : MonoBehaviour
     private static void SetPanel(GameObject panel, bool active)
     {
         if (panel != null) panel.SetActive(active);
+    }
+
+    // ── PPTX notes editor (Feature C) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Wires the PPTX notes-editor controls once in Start: navigation, add/delete/
+    /// reset/done buttons, and the single free-form notes field. The field writes
+    /// straight into NoteDeck on change, so edits are never lost when navigating
+    /// between notes. The character limit and multi-line behaviour are forced in
+    /// code so they don't depend on Inspector setup.
+    /// </summary>
+    private void WirePptxEditor()
+    {
+        if (pptxPrevNoteButton != null)
+        {
+            pptxPrevNoteButton.onClick.RemoveAllListeners();
+            pptxPrevNoteButton.onClick.AddListener(OnPptxPrevNote);
+        }
+        if (pptxNextNoteButton != null)
+        {
+            pptxNextNoteButton.onClick.RemoveAllListeners();
+            pptxNextNoteButton.onClick.AddListener(OnPptxNextNote);
+        }
+        if (pptxAddNoteButton != null)
+        {
+            pptxAddNoteButton.onClick.RemoveAllListeners();
+            pptxAddNoteButton.onClick.AddListener(OnPptxAddNote);
+        }
+        if (pptxDeleteNoteButton != null)
+        {
+            pptxDeleteNoteButton.onClick.RemoveAllListeners();
+            pptxDeleteNoteButton.onClick.AddListener(OnPptxDeleteNote);
+        }
+        if (pptxResetButton != null)
+        {
+            pptxResetButton.onClick.RemoveAllListeners();
+            pptxResetButton.onClick.AddListener(OnPptxReset);
+        }
+        if (pptxDoneButton != null)
+        {
+            pptxDoneButton.onClick.RemoveAllListeners();
+            pptxDoneButton.onClick.AddListener(OnClosePPTX);
+        }
+
+        if (pptxNotesField != null)
+        {
+            // Enforce the limit + multi-line in code so the field behaves
+            // correctly regardless of how it was set up in the Inspector.
+            pptxNotesField.characterLimit = NoteDeck.MaxNoteLength;
+            pptxNotesField.lineType       = TMP_InputField.LineType.MultiLineNewline;
+            pptxNotesField.onValueChanged.RemoveAllListeners();
+            pptxNotesField.onValueChanged.AddListener(OnNotesEdited);
+        }
+    }
+
+    /// <summary>Repaints the editor for NoteDeck.CurrentIndex: note indicator,
+    /// the notes field, the character counter, and button interactability. Called
+    /// when the panel opens and after every edit/navigation action.</summary>
+    private void RefreshPptxEditor()
+    {
+        int count = NoteDeck.NoteCount;
+        if (count > 0)
+            NoteDeck.CurrentIndex = Mathf.Clamp(NoteDeck.CurrentIndex, 0, count - 1);
+
+        // Note indicator — "Note {current} / {total}" (1-based; "0 / 0" when empty).
+        if (pptxNoteIndicatorLabel != null)
+        {
+            int shown = count > 0 ? NoteDeck.CurrentIndex + 1 : 0;
+            string template = Localization.Get("pptx_note_indicator_format");
+            try   { pptxNoteIndicatorLabel.text = string.Format(template, shown, count); }
+            catch { pptxNoteIndicatorLabel.text = $"{shown} / {count}"; }
+        }
+
+        // Notes field — fill from the active note (blank + disabled when empty).
+        string text = count > 0 ? NoteDeck.GetNote(NoteDeck.CurrentIndex) : string.Empty;
+        if (pptxNotesField != null)
+        {
+            pptxNotesField.SetTextWithoutNotify(text);
+            pptxNotesField.interactable = count > 0;
+        }
+        UpdateCharCount(text.Length);
+
+        // Navigation / delete only make sense when there are notes.
+        if (pptxPrevNoteButton   != null) pptxPrevNoteButton.interactable   = count > 0 && NoteDeck.CurrentIndex > 0;
+        if (pptxNextNoteButton   != null) pptxNextNoteButton.interactable   = count > 0 && NoteDeck.CurrentIndex < count - 1;
+        if (pptxDeleteNoteButton != null) pptxDeleteNoteButton.interactable = count > 0;
+    }
+
+    private void UpdateCharCount(int used)
+    {
+        if (pptxCharCountLabel != null)
+            pptxCharCountLabel.text = $"{used} / {NoteDeck.MaxNoteLength}";
+    }
+
+    private void OnNotesEdited(string text)
+    {
+        if (NoteDeck.NoteCount == 0) return;
+        NoteDeck.SetNote(NoteDeck.CurrentIndex, text);
+        UpdateCharCount(text != null ? text.Length : 0);
+    }
+
+    private void OnPptxPrevNote()
+    {
+        if (NoteDeck.NoteCount == 0) return;
+        NoteDeck.CurrentIndex = Mathf.Max(0, NoteDeck.CurrentIndex - 1);
+        RefreshPptxEditor();
+    }
+
+    private void OnPptxNextNote()
+    {
+        if (NoteDeck.NoteCount == 0) return;
+        NoteDeck.CurrentIndex = Mathf.Min(NoteDeck.NoteCount - 1, NoteDeck.CurrentIndex + 1);
+        RefreshPptxEditor();
+    }
+
+    private void OnPptxAddNote()
+    {
+        NoteDeck.AddNote();   // appends an empty note and selects it
+        RefreshPptxEditor();
+    }
+
+    private void OnPptxDeleteNote()
+    {
+        NoteDeck.RemoveNote(NoteDeck.CurrentIndex);
+        RefreshPptxEditor();
+    }
+
+    private void OnPptxReset()
+    {
+        NoteDeck.ResetToSample();
+        RefreshPptxEditor();
     }
 
     // ── Skip to Results ────────────────────────────────────────────────────────
@@ -590,6 +753,20 @@ public class MainMenuController : MonoBehaviour
             devForceResponsivenessMediumLabel.text = Localization.Get("settings_responsiveness_medium");
         if (devForceResponsivenessHardLabel   != null)
             devForceResponsivenessHardLabel.text   = Localization.Get("settings_responsiveness_hard");
+
+        // PPTX notes editor (Feature C) — participant-facing, so localized.
+        if (pptxTitleLabel      != null) pptxTitleLabel.text      = Localization.Get("pptx_panel_title");
+        if (pptxAddNoteLabel    != null) pptxAddNoteLabel.text    = Localization.Get("pptx_add_note");
+        if (pptxDeleteNoteLabel != null) pptxDeleteNoteLabel.text = Localization.Get("pptx_delete_note");
+        if (pptxResetLabel      != null) pptxResetLabel.text      = Localization.Get("pptx_reset_sample");
+        if (pptxDoneLabel       != null) pptxDoneLabel.text       = Localization.Get("pptx_done");
+
+        // Notes field placeholder — the hint shown in an empty field.
+        if (pptxNotesField != null && pptxNotesField.placeholder is TextMeshProUGUI ph)
+            ph.text = Localization.Get("pptx_notes_placeholder");
+
+        // Repaint the note indicator (its format string is localized).
+        RefreshPptxEditor();
 
         // Update the duration suffix label too.
         if (durationSlider != null) UpdateLabel(durationSlider.value);
